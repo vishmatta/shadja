@@ -33,13 +33,19 @@ html { scroll-padding-top: env(safe-area-inset-top, 0px); }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.4; -webkit-text-size-adjust: 100%; }
-.app { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+.app { max-width: 1200px; margin: 0 auto; padding: 20px 16px 40px; }
 h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 4px; }
 .lede { margin: 0 0 20px; color: var(--muted); max-width: 56ch; }
-.layout { display: grid; gap: 20px; grid-template-columns: 1fr; }
-@media (min-width: 800px) { .layout { grid-template-columns: 360px 1fr; align-items: start; } }
+/* Phone: one column, stage (sing-along + piano + play) right after the controls.
+   Desktop: controls on the left, stage pinned on the right while the left column scrolls. */
+.layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 800px) {
+  .layout { grid-template-columns: 380px minmax(0, 1fr); column-gap: 24px; row-gap: 0; }
+  .layout > * { grid-column: 1; margin-bottom: 16px; }
+  .layout > .stage-col { grid-column: 2; grid-row: 1 / span 5; margin-bottom: 0; }
+  .stage { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
+}
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-.panel + .panel { margin-top: 16px; }
 .field-label { display: block; font-size: .85rem; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
 .label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 .label-row .field-label { margin: 0; }
@@ -95,7 +101,7 @@ button.cell { font: inherit; font-size: .78rem; font-weight: 600; cursor: pointe
 
 /* piano */
 .piano-wrap { display: flex; justify-content: center; padding: 8px 0; }
-.piano { position: relative; width: min(100%, 420px); margin: 26px 0; }
+.piano { position: relative; width: min(100%, 420px); margin: 20px 0; }
 .key { position: absolute; margin: 0; cursor: pointer; font: inherit; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 0 10px 0 0; transition: background-color .15s, opacity .15s; }
 .key.white { left: 0; right: 0; background: var(--white-key); color: #1a1e3a; border: 1px solid var(--white-edge); border-radius: 0 10px 10px 0; }
 .key.black { left: 0; width: 62%; background: var(--black-key); color: #eceffc; border: 1px solid var(--black-key); border-radius: 0 8px 8px 0; z-index: 2; }
@@ -142,7 +148,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
 .howto summary:focus-visible { outline: 3px solid var(--scale); outline-offset: 2px; }
 .howto p { margin: 8px 0 0; color: var(--muted); }
 .tempo { display: flex; align-items: flex-end; gap: 14px; margin-top: 16px; }
-.sing { text-align: center; margin-top: 16px; padding: 12px 8px; border: 1px solid var(--line); border-radius: 12px; }
+.sing { text-align: center; margin-top: 0; padding: 12px 8px; border: 1px solid var(--line); border-radius: 12px; }
 .sing-now { font-size: 3rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; min-height: 1.15em; }
 .sing-now .oct.lo::after, .sing-now .oct.hi::after { width: 8px; height: 8px; margin-left: -4px; }
 .sing-now .oct.lo::after { bottom: -4px; }
@@ -187,7 +193,6 @@ details.adv[open] > summary { margin-bottom: 12px; }
   <p class="lede">Learn Hindustani ragas by ear: pick your Sa, start the drone, and sing along with each raga’s phrases. Western scales are one tap away.</p>
 
   <div class="layout">
-    <div>
       <div class="panel">
         <span class="field-label" id="sysLabel">System</span>
         <div class="seg wide sys" role="group" aria-labelledby="sysLabel">
@@ -274,15 +279,32 @@ details.adv[open] > summary { margin-bottom: 12px; }
             </div>
           </div>
         </div>
-        <div class="sing" aria-live="off">
-          <div class="sing-now" id="singNow">Sa</div>
-          <div class="sing-num" id="singNum"></div>
-          <div class="sing-next" id="singNext">Press play and sing along</div>
+      </div>
+
+      <div class="stage-col">
+        <div class="panel stage" id="stage">
+          <div class="sing" aria-live="off">
+            <div class="sing-now" id="singNow">Sa</div>
+            <div class="sing-num" id="singNum"></div>
+            <div class="sing-next" id="singNext">Press play and sing along</div>
+          </div>
+          <div class="piano-wrap"><div class="piano" id="piano"></div></div>
+          <p class="status" id="status" aria-live="polite" hidden></p>
+          <div class="play-row">
+            <button type="button" class="play" id="play">Play scale</button>
+            <button type="button" class="play alt" id="replay" disabled>Replay order</button>
+          </div>
         </div>
+      </div>
+
+      <div class="panel" id="echoPanel">
+        <p class="readout-title">Call and response</p>
+        <p class="hint">The piano plays a short phrase. Then it’s your turn: sing it back, and the phrase plays again so you can compare. Tap the keys during your turn if you want it checked.</p>
         <div class="play-row">
-          <button type="button" class="play" id="play">Play scale</button>
-          <button type="button" class="play alt" id="replay" disabled>Replay order</button>
+          <button type="button" class="play" id="echoNew">New phrase</button>
+          <button type="button" class="play alt" id="echoAgain" disabled>Same phrase again</button>
         </div>
+        <div class="echo-result" id="echoResult" aria-live="polite"></div>
       </div>
 
       <div class="panel" id="tunerPanel">
@@ -305,21 +327,11 @@ details.adv[open] > summary { margin-bottom: 12px; }
         </div>
       </div>
 
-      <div class="panel" id="echoPanel">
-        <p class="readout-title">Call and response</p>
-        <p class="hint">The piano plays a short phrase. Then it’s your turn: sing it back, and the phrase plays again so you can compare. Tap the keys during your turn if you want it checked.</p>
-        <div class="play-row">
-          <button type="button" class="play" id="echoNew">New phrase</button>
-          <button type="button" class="play alt" id="echoAgain" disabled>Same phrase again</button>
-        </div>
-        <div class="echo-result" id="echoResult" aria-live="polite"></div>
-      </div>
-
-      <div class="panel" id="ragaPanel" hidden>
-        <p class="readout-title">Raga rules</p>
+      <details class="panel adv" id="ragaPanel" hidden>
+        <summary>Raga rules</summary>
         <dl class="meta" id="ragaMeta"></dl>
         <p class="hint" style="margin-top:12px">◯ on a key = resting note. ♭ = komal, ♯ = tivra. A dot below a note means the lower octave, a dot above means the upper octave. These are common textbook forms; gharanas differ, and ornaments like andolan and meend aren’t played yet.</p>
-      </div>
+      </details>
 
       <details class="panel adv" id="adv">
         <summary>Advanced: numbers and note selection</summary>
@@ -358,13 +370,6 @@ details.adv[open] > summary { margin-bottom: 12px; }
           <dt id="ordT" hidden>Random play order (#n on the piano)</dt><dd id="ordD" hidden></dd>
         </dl>
       </details>
-
-    </div>
-
-    <div class="panel">
-      <div class="piano-wrap"><div class="piano" id="piano"></div></div>
-      <p class="status" id="status" aria-live="polite" hidden></p>
-    </div>
   </div>
 </div>
 
@@ -1118,6 +1123,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
     startSeq(echo.phrase.slice(), { onDone: echoTurn });
     echo.phase = 'call';
     render();
+    showStage();
   }
   function echoTurn() {
     echo.phase = 'turn';
@@ -1223,7 +1229,41 @@ details.adv[open] > summary { margin-bottom: 12px; }
     return false;
   }
 
-  function render() {
+  // Size the keys so the whole stage (sing-along, piano, play buttons) fits on one screen:
+  // a phone shows it all without scrolling, and the pinned desktop stage isn't cut off.
+  var stageExtra = 300, refitting = false, fitH = window.innerHeight || 0, fitW = window.innerWidth || 0;
+  function fitKey(whiteCount, base) {
+    if (!fitH) return base;
+    var k = Math.floor((fitH - stageExtra - 32) / whiteCount);
+    return Math.max(40, Math.min(base, k));
+  }
+  function refit() {
+    var st = $('stage'), pn = $('piano');
+    if (refitting || !st || !st.offsetHeight) return;
+    var extra = st.offsetHeight - pn.offsetHeight;
+    if (Math.abs(extra - stageExtra) > 2) { stageExtra = extra; refitting = true; render(); refitting = false; }
+  }
+  var fitTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(function () {
+      // Ignore Safari's toolbar showing and hiding while scrolling (a height change under ~150 px).
+      if (window.innerWidth === fitW && Math.abs(window.innerHeight - fitH) < 150) return;
+      fitW = window.innerWidth; fitH = window.innerHeight; render();
+    }, 150);
+  });
+  // On a phone the stage isn't pinned: bring it into view so the piano is visible while a phrase plays.
+  function showStage() {
+    var st = $('stage'); if (!st || !st.scrollIntoView) return;
+    var r = st.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > window.innerHeight) {
+      var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      st.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'nearest' });
+    }
+  }
+
+  function render() { renderNow(); refit(); }
+  function renderNow() {
     var N = names(), raga = isRaga(), iv = scaleNotes();
     var info = raga ? ragaInfo(state.scale) : null;
     var inScale = {};
@@ -1319,12 +1359,13 @@ details.adv[open] > summary { margin-bottom: 12px; }
     var piano = $('piano');
     piano.innerHTML = '';
     var whiteCount = 0, layout = [];
-    var Wk = raga ? 52 : W, Bk = raga ? 34 : B;
     for (var i = raga ? -5 : 0; i <= 12; i++) {
       var pc = pcOf(state.root + i);
       layout.push({ i: i, pc: pc, black: !!BLACK[pc], pos: whiteCount });
       if (!BLACK[pc]) whiteCount++;
     }
+    var baseW = raga ? 52 : W, baseB = raga ? 34 : B;
+    var Wk = fitKey(whiteCount, baseW), Bk = Math.round(baseB * Wk / baseW);
     piano.style.height = (whiteCount * Wk) + 'px';
 
     layout.forEach(function (k) {
@@ -1490,6 +1531,8 @@ details.adv[open] > summary { margin-bottom: 12px; }
     }
   }
 
+  // Raga rules start open on a wide screen, folded on a phone.
+  if (window.matchMedia && window.matchMedia('(min-width: 800px)').matches) $('ragaPanel').open = true;
   render();
 })();
 </script>

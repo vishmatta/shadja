@@ -25,6 +25,7 @@ Shadja is a personal web app for learning Hindustani classical ragas by ear and 
 - **Drone:** `setDrone` handles three styles: `steady` (sustained oscillators: `startSteady`, `updateSteady`), `tanpura` (Karplus-Strong physical model: `ksBuffer`, `tanPluck`, `scheduleDrone`, `tanBody`) and `both` (steady gain 0.45 under tanpura session gain 2.76).
 - **Tuner:** `detectPitch` (McLeod normalized autocorrelation at half sample rate, 70–1000 Hz), `tunerTick` running 20 times a second, `finishSeg` for after-note feedback, `verdict` (±20 cents in tune, flags notes outside the raga).
 - **Call and response:** `echoStart`, `echoTurn`, `echoAnswer`.
+- **Layout:** `.layout` is one column on phones (controls → stage → call and response → tuner → raga rules → advanced). From 800 px wide it is two columns, with the `#stage` panel (sing-along display, piano, Play buttons) pinned on the right. `fitKey`/`refit` shrink the keys (minimum 40 px) so the stage fits one screen height. Target devices: iPhone 17 Pro Max (Safari viewport about 440×763) and MacBook Air M1 (about 1440×790).
 
 ## Audio rules (learned the hard way)
 - Schedule sound and visuals on `ctx.currentTime` plus output latency, never on bare `setTimeout`/`setInterval` timing. Visual highlights drifted a note off before this was fixed.
