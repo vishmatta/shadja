@@ -1,0 +1,40 @@
+# Decisions since the handoff
+
+A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HANDOFF.md stays frozen as a snapshot. Where an entry here contradicts it, **this file wins**. Newest first. Each entry links to its pull request or issue.
+
+## 2026-11-09
+
+- **The repo About section and README were refreshed. HANDOFF.md stays frozen, and this file records changes instead.** *Why:* keep the original snapshot intact while giving agents an accurate current picture.
+- **Tuner: a gate stops the app's own sound from fooling the tuner** ([#25](https://github.com/vishmatta/shadja/pull/25), part of [#17](https://github.com/vishmatta/shadja/issues/17)).
+  - All app sound goes through `outBus()`.
+  - When the drone starts with the tuner on, the tuner measures for 2 s how much drone reaches the mic. After that it ignores sound that isn't 1.5× louder than the expected leak.
+  - The new *Mic settings and check* box holds Mic cleanup (echo cancellation), a mic picker, a level meter and mic diagnostics.
+  - *Why:* with the drone on the speaker, the tuner reported false Sa and Pa notes while Vishal was silent.
+  - **Open:** the Mic cleanup default stays **on** until Vishal's device test in #17 picks it.
+- **Tuner: shorter hold and steadier note splitting** ([#24](https://github.com/vishmatta/shadja/pull/24), [#16](https://github.com/vishmatta/shadja/issues/16)).
+  - *Supersedes the handoff's* "a held note needs ~0.6 s". A note now counts after **0.35 s**.
+  - A new note needs 3 frames in a row (150 ms) more than 70¢ away.
+  - The silence gate is 3× the room's background level, never stricter than 0.01, and the clarity cut-off is 0.7.
+  - The last 6 notes stay on screen.
+  - *Why:* results vanished when notes were sung back to back, and short or quiet notes were missed.
+- **Screen wake lock while practising** ([#15](https://github.com/vishmatta/shadja/pull/15), closes [#3](https://github.com/vishmatta/shadja/issues/3)).
+  - *Resolves the handoff's* unconfirmed "phones may pause the drone when the screen locks".
+  - The lock is held while the drone, playback, tuner or call and response runs, with an Advanced switch to turn it off.
+  - Still to confirm on the iPhone (#5).
+- **Phone and desktop layout** ([#2](https://github.com/vishmatta/shadja/pull/2)).
+  - *Resolves the handoff's* "on mobile the piano sits below the panels".
+  - Phones: one column with the stage (sing-along display, piano, Play) right after the controls.
+  - 800 px and wider: two columns, with the stage pinned on the right.
+  - Keys shrink, with a 40 px minimum, so the stage fits one screen.
+  - Target devices: iPhone 17 Pro Max and MacBook Air M1.
+- **Renamed to Shadja and moved HANDOFF.md into `docs/`** ([#1](https://github.com/vishmatta/shadja/pull/1)).
+  - *Supersedes the handoff's* "current page title and h1 (not yet renamed): Raga practice piano". Both now say **Shadja**.
+- **The handoff's open items became GitHub issues #4–#23, with priority labels.**
+  - Still open from the handoff: one file or split ([#9](https://github.com/vishmatta/shadja/issues/9), needs a decision), raga data check ([#7](https://github.com/vishmatta/shadja/issues/7)), real-device checks ([#5](https://github.com/vishmatta/shadja/issues/5)).
+- **Repo locked down for a public repo.**
+  - Ruleset "protect main": PRs required (0 approvals), no force-push or deletion, linear history.
+  - Squash and rebase merges only; head branches deleted automatically after merge.
+  - Actions limited to the owner's and GitHub's own actions, with a read-only token.
+  - Secret scanning and push protection on.
+  - GitHub Pages deploys from `main` with HTTPS enforced.
+- **No licence (all rights reserved).** Vishal kept the default when the README was refreshed.
