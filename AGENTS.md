@@ -1,6 +1,6 @@
 # AGENTS.md — Shadja
 
-Rules and context for AI coding agents working in this repo. Keep this file under ~20 KB (Antigravity truncates rule files over 24,000 bytes). Full project history and decisions: `docs/HANDOFF.md`.
+Rules and context for AI coding agents working in this repo. Keep this file under ~20 KB (Antigravity truncates rule files over 24,000 bytes). Project history and decisions: `docs/HANDOFF.md` (the original handoff; frozen, never edit it) and `docs/DECISIONS.md` (living log of changes since; it wins where the two disagree, so add an entry there for each decision or merged PR).
 
 ## What this is
 Shadja is a personal web app for learning Hindustani classical ragas by ear and by singing, with a Western scales mode kept behind a toggle. The only user is Vishal, an absolute beginner who practises by singing.
