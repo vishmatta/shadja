@@ -183,6 +183,14 @@ details.adv[open] > summary { margin-bottom: 12px; }
 .t-status { font-size: .85rem; color: var(--muted); min-height: 1.3em; }
 .t-hist-wrap { margin-top: 12px; }
 .t-hist-wrap[hidden] { display: none; }
+.mic-box { margin: 14px 0 0; }
+.mic-box .numbering { margin-top: 10px; }
+.mic-box select { margin-bottom: 0; }
+.mic-box .drone-btn { margin-top: 4px; }
+.lvl { position: relative; height: 10px; border-radius: 5px; background: var(--bg); overflow: hidden; }
+.lvl-bar { height: 100%; width: 0; background: var(--scale); transition: width .15s; }
+.lvl-gate { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--ink); }
+.mic-box .mic-check { white-space: pre-line; color: var(--ink); font-variant-numeric: tabular-nums; }
 .warn { margin: -4px 0 14px; font-size: .85rem; font-weight: 600; color: var(--bad); }
 .dirline { display: block; }
 .numbers.split { font-size: 1.5rem; }
@@ -333,6 +341,27 @@ details.adv[open] > summary { margin-bottom: 12px; }
           <span class="field-label" id="tHistLabel">Your last notes (newest on the right)</span>
           <div class="echo-notes" id="tHist" role="group" aria-labelledby="tHistLabel"></div>
         </div>
+        <details class="howto mic-box" id="micBox">
+          <summary>Mic settings and check</summary>
+          <div class="numbering">
+            <span class="field-label" id="mcLabel">Mic cleanup (echo cancellation)</span>
+            <div class="seg" role="group" aria-labelledby="mcLabel">
+              <button type="button" id="mcOff">Off</button>
+              <button type="button" id="mcOn">On</button>
+            </div>
+            <p>On: the phone tries to remove the drone from the mic, but it can also turn the drone down or muffle your voice. Off: the most natural sound, best with headphones. Try both and keep whichever works better.</p>
+          </div>
+          <div class="numbering">
+            <label class="field-label" for="micSel">Microphone</label>
+            <select id="micSel"><option value="">Default (let the phone choose)</option></select>
+            <p>With AirPods, try the iPhone microphone: using the AirPods mic switches them to phone-call quality, which makes the drone sound thin.</p>
+          </div>
+          <span class="field-label" id="lvlLabel">Mic level (the line is the level you need to beat)</span>
+          <div class="lvl" role="img" aria-labelledby="lvlLabel"><div class="lvl-bar" id="lvlBar"></div><div class="lvl-gate" id="lvlGate"></div></div>
+          <p class="mic-check" id="micCheck">Start the tuner to see mic details.</p>
+          <p>If the drone plays from the speaker, the tuner checks how much of it reaches the mic when the drone starts (stay quiet for 2 seconds), then ignores it. If you moved the phone or sang during the check, measure again.</p>
+          <button type="button" class="drone-btn" id="micCal">Measure the drone again</button>
+        </details>
       </div>
 
       <details class="panel adv" id="ragaPanel" hidden>
@@ -502,7 +531,8 @@ details.adv[open] > summary { margin-bottom: 12px; }
   var state = {
     system: 'raga', root: 0, scale: 'Yaman', base: 1, flats: false, lock: false,
     octave: 3, mode: 'aroha', enabled: {}, ord: null, ordCount: 0, ordSig: '', strict: true, lastTap: null, subset: false,
-    drone: false, droneVol: 45, droneStyle: 'both', bpm: 80, loop: false, tunerMode: 'ear', keepAwake: true
+    drone: false, droneVol: 45, droneStyle: 'both', bpm: 80, loop: false, tunerMode: 'ear', keepAwake: true,
+    micClean: true, micId: ''
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -634,6 +664,23 @@ details.adv[open] > summary { margin-bottom: 12px; }
 
   // audio
   var ctx = null;
+  // Everything the app plays goes through one output bus. The tuner measures it (outLevel) to tell your voice
+  // apart from the app's own sound leaking from the speaker into the mic.
+  var bus = null, busAn = null, busBuf = null;
+  function outBus() {
+    if (!bus) {
+      bus = ctx.createGain(); bus.connect(ctx.destination);
+      busAn = ctx.createAnalyser(); busAn.fftSize = 2048; busBuf = new Float32Array(busAn.fftSize);
+      bus.connect(busAn);
+    }
+    return bus;
+  }
+  function outLevel() {
+    if (!busAn) return 0;
+    busAn.getFloatTimeDomainData(busBuf);
+    for (var i = 0, s = 0; i < busBuf.length; i++) s += busBuf[i] * busBuf[i];
+    return Math.sqrt(s / busBuf.length);
+  }
   function tone(offset, when, dur) {
     try {
       ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
@@ -646,7 +693,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-      o.connect(g); g.connect(ctx.destination);
+      o.connect(g); g.connect(outBus());
       o.start(t); o.stop(t + d + 0.05);
     } catch (e) { /* audio unavailable */ }
   }
@@ -809,11 +856,12 @@ details.adv[open] > summary { margin-bottom: 12px; }
       try {
         ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
         if (ctx.state === 'suspended') ctx.resume();
-        if (!droneGain) { droneGain = ctx.createGain(); droneGain.connect(ctx.destination); }
+        if (!droneGain) { droneGain = ctx.createGain(); droneGain.connect(outBus()); }
         droneGain.gain.value = state.droneVol / 100;
         if (state.droneStyle !== 'tanpura') startSteady();
         if (state.droneStyle !== 'steady') startTanpura();
       } catch (e) { state.drone = false; }
+      if (state.drone) tunerCal();
     }
     render();
   }
@@ -995,7 +1043,8 @@ details.adv[open] > summary { margin-bottom: 12px; }
   // last RELEASE frame are left out of the verdict. A new note starts only after CONFIRM frames in a row sit more than
   // JUMP cents from the current one, so a single stray frame can't split a held note. GAP pitchless frames end a note.
   var TN = { frame: 0.05, minFrames: 7, attack: 2, release: 1, jump: 70, confirm: 3, gap: 5, clarity: 0.7, hist: 6 };
-  var tuner = { on: false, stream: null, src: null, an: null, timer: null, buf: null, seg: null, silent: 0, pend: [], floor: 0.003, hist: [] };
+  var tuner = { on: false, stream: null, src: null, an: null, timer: null, buf: null, seg: null, silent: 0, pend: [], floor: 0.003, hist: [],
+    k: null, cal: 0, calR: [], outH: [], tick: 0, info: null };
   // Returns { f: Hz or null, rms }. gate: the input level below which a frame counts as silence.
   function detectPitch(raw, sr, gate) {
     var n = raw.length >> 1, x = new Float32Array(n), i, rms = 0;
@@ -1088,10 +1137,43 @@ details.adv[open] > summary { margin-bottom: 12px; }
     renderHist();
     tunerStatus('Listening… sing the next note.');
   }
+  // Own-sound gate: while the app is playing (drone or piano), a frame only counts as your voice if the mic is clearly
+  // louder (TN.bleed×) than the app's own sound would make it. tuner.k = mic level ÷ app output level when you're
+  // silent, measured for 2 s whenever the drone starts with the tuner on (tunerCal). outH covers ~0.4 s of output
+  // levels, enough for speaker and Bluetooth delay.
+  TN.bleed = 1.5; TN.cal = 40; TN.outWin = 8;
+  function tunerCal() {
+    if (!tuner.on) return;
+    finishSeg();
+    tuner.k = null; tuner.cal = TN.cal; tuner.calR = [];
+    tunerStatus('Checking how much drone reaches the mic… stay quiet for 2 seconds.');
+  }
+  function droneLike(tc) {
+    return [0, droneSecond()].some(function (pc) { var d = ((tc - pc * 100) % 1200 + 1200) % 1200; return Math.min(d, 1200 - d) <= 30; });
+  }
+  function pct(arr, q) { var b = arr.slice().sort(function (x, y) { return x - y; }); return b[Math.min(b.length - 1, Math.floor(q * b.length))]; }
   function tunerTick() {
     tuner.an.getFloatTimeDomainData(tuner.buf);
+    tuner.outH.push(outLevel());
+    if (tuner.outH.length > TN.outWin) tuner.outH.shift();
+    var outMax = Math.max.apply(null, tuner.outH), playing = outMax > 0.003;
     // Silence gate follows the room: about 3× the background level, never stricter than the old fixed 0.01.
-    var p = detectPitch(tuner.buf, ctx.sampleRate, Math.min(0.01, Math.max(0.002, tuner.floor * 3)));
+    var gate = Math.min(0.01, Math.max(0.002, tuner.floor * 3));
+    var p = detectPitch(tuner.buf, ctx.sampleRate, gate);
+    var own = tuner.k !== null && playing ? TN.bleed * tuner.k * outMax : 0;
+    if (++tuner.tick % 4 === 0) micShow(p.rms, Math.max(gate, own));
+    if (tuner.cal > 0) {
+      tuner.cal--;
+      // count only frames that sound like the drone (Sa or its second note), so singing during the check is left out
+      if (playing && (!p.f || droneLike(totalCents(p.f)))) tuner.calR.push(p.rms / outMax);
+      if (!tuner.cal) {
+        tuner.k = tuner.calR.length >= 8 ? pct(tuner.calR, 0.25) : null;
+        tunerStatus('Listening…');
+        if (tuner.k !== null && tuner.k >= 0.8) tunerShow(null, null, 'The drone is almost as loud as your voice in the mic, so some notes may be missed. Headphones work best; or turn the drone down, or try Mic cleanup: On.', 'off', null);
+      }
+      return;
+    }
+    if (p.f && p.rms < own) p.f = null;                                 // the app's own sound, not you
     if (!p.f) {
       tuner.floor = Math.max(0.0005, Math.min(0.05, tuner.floor + 0.1 * (p.rms - tuner.floor)));
       tuner.pend = [];
@@ -1117,27 +1199,61 @@ details.adv[open] > summary { margin-bottom: 12px; }
     }
     tunerStatus('Hearing a note… hold it, then stop or move on.');
   }
+  // Mic settings and check: what the browser actually gave us, a level meter, and how much drone leaks in.
+  function micShow(rms, gate) {
+    var db = function (x) { return Math.max(0, Math.min(100, (20 * Math.log10(Math.max(x, 1e-6)) + 60) / 60 * 100)); };
+    $('lvlBar').style.width = db(rms) + '%';
+    $('lvlGate').style.left = db(gate) + '%';
+    var i = tuner.info || {}, k = tuner.k;
+    var leak = tuner.cal > 0 ? 'measuring…' : k === null ? (state.drone ? 'not measured' : 'start the drone to measure') :
+      (k < 0.05 ? 'very little' : k < 0.2 ? 'some' : 'a lot') + ' (' + k.toFixed(2) + ')';
+    var txt = 'Mic: ' + (i.label || 'unknown') + '\nSample rate: ' + (i.sr ? Math.round(i.sr / 100) / 10 + ' kHz' : 'not reported') +
+      '\nCleanup in use: ' + (i.ec === true ? 'on' : i.ec === false ? 'off' : 'not reported') + '\nDrone reaching the mic: ' + leak;
+    if ($('micCheck').textContent !== txt) $('micCheck').textContent = txt;
+  }
+  function fillMics() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    navigator.mediaDevices.enumerateDevices().then(function (list) {
+      var ins = list.filter(function (d) { return d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default'; });
+      var sel = $('micSel'), opts = '<option value="">Default (let the phone choose)</option>';
+      ins.forEach(function (d, j) {
+        opts += '<option value="' + d.deviceId.replace(/"/g, '&quot;') + '">' + (d.label || 'Microphone ' + (j + 1)).replace(/</g, '&lt;') + '</option>';
+      });
+      sel.innerHTML = opts;
+      sel.value = ins.some(function (d) { return d.deviceId === state.micId; }) ? state.micId : '';
+    }).catch(function () {});
+  }
   function tunerFail(msg) { tunerStop(); tunerShow(null, null, msg, 'off', null); }
-  function tunerStart() {
+  function tunerStart(retry) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       tunerFail('This browser isn’t giving the page microphone access.');
       return;
     }
     try { ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); } catch (e) { tunerFail('Audio isn’t available here.'); return; }
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } }).then(function (stream) {
+    // echoCancellation is a plain boolean: Safari rejects {exact: false}.
+    var audio = { echoCancellation: state.micClean, noiseSuppression: false, autoGainControl: false };
+    if (state.micId) audio.deviceId = { exact: state.micId };
+    navigator.mediaDevices.getUserMedia({ audio: audio }).then(function (stream) {
       tuner.stream = stream;
+      var tr = stream.getAudioTracks()[0], st = tr && tr.getSettings ? tr.getSettings() : {};
+      tuner.info = { label: tr && tr.label, sr: st.sampleRate || ctx.sampleRate, ec: st.echoCancellation };
       tuner.src = ctx.createMediaStreamSource(stream);
       tuner.an = ctx.createAnalyser();
       tuner.an.fftSize = 2048;
       tuner.buf = new Float32Array(tuner.an.fftSize);
       tuner.src.connect(tuner.an);
       tuner.on = true; tuner.seg = null; tuner.silent = 0; tuner.pend = []; tuner.floor = 0.003; tuner.hist = [];
+      tuner.k = null; tuner.cal = 0; tuner.outH = []; tuner.tick = 0;
       tuner.timer = setInterval(tunerTick, TN.frame * 1000);
       renderHist();
-      tunerShow(null, null, 'Sing a note and hold it. You’ll see how close you were when you stop or move to the next note.', '', null);
+      tunerShow(null, null, retry ? 'That microphone isn’t available, so the default one is in use.' : 'Sing a note and hold it. You’ll see how close you were when you stop or move to the next note.', retry ? 'off' : '', null);
       tunerStatus('Listening…');
+      if (state.drone) tunerCal();
+      micShow(0, 0);
+      fillMics();
       render();
     }).catch(function (e) {
+      if (state.micId && e && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) { state.micId = ''; tunerStart(true); return; }
       var blocked = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
       tunerFail(blocked
         ? 'Microphone access was blocked. If you never saw a permission prompt, the claude.ai viewer may not allow the mic here; ask me for a version you can open directly in your browser.'
@@ -1148,15 +1264,23 @@ details.adv[open] > summary { margin-bottom: 12px; }
     clearInterval(tuner.timer); tuner.timer = null;
     if (tuner.stream) tuner.stream.getTracks().forEach(function (t) { t.stop(); });
     if (tuner.src) tuner.src.disconnect();
-    tuner.stream = tuner.src = tuner.an = null; tuner.seg = null; tuner.pend = [];
+    tuner.stream = tuner.src = tuner.an = null; tuner.seg = null; tuner.pend = []; tuner.cal = 0;
     tunerStatus('');
     var was = tuner.on; tuner.on = false;
     if (was) render();
   }
+  function tunerRestart() { if (tuner.on) { tunerStop(); tunerStart(); } }
   $('tunerBtn').addEventListener('click', function () { if (tuner.on) { tunerStop(); tunerShow(null, null, 'Tuner stopped.', '', null); } else tunerStart(); });
   [['tmEar', 'ear'], ['tmLive', 'live']].forEach(function (pm) {
     $(pm[0]).addEventListener('click', function () { state.tunerMode = pm[1]; tuner.seg = null; tuner.pend = []; render(); });
   });
+  bindSeg('mcOff', 'mcOn', function (v) { state.micClean = v; tunerRestart(); });
+  $('micCal').addEventListener('click', function () {
+    if (tuner.on && state.drone) tunerCal();
+    else tunerStatus(tuner.on ? 'Start the drone first.' : 'Start the tuner and the drone first.');
+  });
+  $('micSel').addEventListener('change', function () { state.micId = this.value; tunerRestart(); });
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', fillMics);
 
   // Call and response
   var echo = { phrase: [], phase: 'idle', taps: [], timer: null };
@@ -1393,6 +1517,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
     press('sW', !raga); press('sH', raga);
     press('b0', state.base === 0); press('b1', state.base === 1);
     press('kwOff', !state.keepAwake); press('kwOn', state.keepAwake);
+    press('mcOff', !state.micClean); press('mcOn', state.micClean);
     press('aS', !state.flats); press('aF', state.flats);
     press('lOff', !state.lock); press('lOn', state.lock);
     press('rOff', !state.strict); press('rOn', state.strict);
