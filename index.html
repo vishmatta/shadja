@@ -334,7 +334,15 @@ details.adv[open] > summary { margin-bottom: 12px; }
       </details>
 
       <details class="panel adv" id="adv">
-        <summary>Advanced: numbers and note selection</summary>
+        <summary>Advanced: numbers, notes and screen</summary>
+        <div class="numbering" id="awakeRow" hidden>
+          <span class="field-label" id="awakeLabel">Keep screen on while practising</span>
+          <div class="seg" role="group" aria-labelledby="awakeLabel">
+            <button type="button" id="kwOff">Off</button>
+            <button type="button" id="kwOn">On</button>
+          </div>
+          <p class="hint" style="margin-top:8px">Stops your phone locking (which can cut the drone) while the drone, playback, call and response or the tuner is running.</p>
+        </div>
         <div class="numbering">
           <span class="field-label" id="baseLabel">Numbering</span>
           <div class="seg" role="group" aria-labelledby="baseLabel">
@@ -486,7 +494,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
   var state = {
     system: 'raga', root: 0, scale: 'Yaman', base: 1, flats: false, lock: false,
     octave: 3, mode: 'aroha', enabled: {}, ord: null, ordCount: 0, ordSig: '', strict: true, lastTap: null, subset: false,
-    drone: false, droneVol: 45, droneStyle: 'both', bpm: 80, loop: false, tunerMode: 'ear'
+    drone: false, droneVol: 45, droneStyle: 'both', bpm: 80, loop: false, tunerMode: 'ear', keepAwake: true
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -583,6 +591,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
     $(b).addEventListener('click', function () { fn(true); render(); });
   }
   bindSeg('b0', 'b1', function (v) { state.base = v ? 1 : 0; });
+  bindSeg('kwOff', 'kwOn', function (v) { state.keepAwake = v; });
   bindSeg('aS', 'aF', function (v) { state.flats = v; });
   bindSeg('lOff', 'lOn', function (v) { state.lock = v; });
   bindSeg('rOff', 'rOn', function (v) { state.strict = v; state.lastTap = null; });
@@ -1262,7 +1271,31 @@ details.adv[open] > summary { margin-bottom: 12px; }
     }
   }
 
-  function render() { renderNow(); refit(); }
+  // Screen wake lock: keep the screen on while anything is sounding or listening, so the phone
+  // doesn't auto-lock mid-practice. Browsers drop the lock when the page is hidden, so ask again
+  // when it's visible, and on the next tap (iOS can refuse a request made outside a tap).
+  var wake = { lock: null, pending: false };
+  var wakeOK = !!(navigator.wakeLock && navigator.wakeLock.request);
+  function practising() { return !!(state.drone || player.on || tuner.on || echo.phase !== 'idle'); }
+  function syncWake() {
+    if (!wakeOK) return;
+    var want = state.keepAwake && practising() && document.visibilityState === 'visible';
+    if (want && !wake.lock && !wake.pending) {
+      wake.pending = true;
+      navigator.wakeLock.request('screen').then(function (l) {
+        wake.pending = false; wake.lock = l;
+        l.addEventListener('release', function () { if (wake.lock === l) wake.lock = null; });
+        if (!(state.keepAwake && practising())) syncWake();
+      }).catch(function () { wake.pending = false; });
+    } else if (!want && wake.lock) {
+      var l = wake.lock; wake.lock = null;
+      l.release().catch(function () {});
+    }
+  }
+  document.addEventListener('visibilitychange', syncWake);
+  document.addEventListener('pointerdown', syncWake, true);
+
+  function render() { renderNow(); refit(); syncWake(); }
   function renderNow() {
     var N = names(), raga = isRaga(), iv = scaleNotes();
     var info = raga ? ragaInfo(state.scale) : null;
@@ -1308,6 +1341,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
     var press = function (id, v) { $(id).setAttribute('aria-pressed', String(v)); };
     press('sW', !raga); press('sH', raga);
     press('b0', state.base === 0); press('b1', state.base === 1);
+    press('kwOff', !state.keepAwake); press('kwOn', state.keepAwake);
     press('aS', !state.flats); press('aF', state.flats);
     press('lOff', !state.lock); press('lOn', state.lock);
     press('rOff', !state.strict); press('rOn', state.strict);
@@ -1531,6 +1565,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
     }
   }
 
+  $('awakeRow').hidden = !wakeOK;
   // Raga rules start open on a wide screen, folded on a phone.
   if (window.matchMedia && window.matchMedia('(min-width: 800px)').matches) $('ragaPanel').open = true;
   render();
