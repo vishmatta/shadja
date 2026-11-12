@@ -1,0 +1,50 @@
+/* Direction C: Mor (peacock). Flat, type-led, no boxes. Font: Anek Latin (+ Anek Devanagari) */
+:root { --off-white:#f1f5f6; --off-edge:#ffffff; --off-black-ink:#9fb3bb; --bg:#ffffff; --panel:#ffffff; --ink:#0d1f2b; --muted:#566874; --line:#e2e8ec; --soft:#f1f5f6;
+  --scale:#00707f; --scale-ink:#fff; --root:#ffb000; --root-ink:#0d1f2b;
+  --white-key:#f1f5f6; --white-edge:#f1f5f6; --black-key:#0d1f2b; --bad:#c9243f;
+  --font:"Anek Latin",system-ui,sans-serif; --display:"Anek Latin",system-ui,sans-serif; }
+:root[data-theme="dark"] { --off-white:#16292f; --off-edge:#081316; --off-black-ink:#7f969e; --bg:#081316; --panel:#081316; --ink:#e9f4f5; --muted:#8fa5ad; --line:#1d3036; --soft:#11242a;
+  --scale:#35c4cf; --scale-ink:#03242a; --root:#ffb81f; --root-ink:#0d1f2b;
+  --white-key:#dfeaec; --white-edge:#dfeaec; --black-key:#02090b; --bad:#ff6b81; }
+body { font-size:17px; }
+.app { padding-top:28px; }
+h1 { font-family:var(--display); font-stretch:125%; font-weight:800; font-size:3.2rem; letter-spacing:-.03em; line-height:.95; margin-bottom:10px; }
+h1 .deva { display:block; font-family:"Anek Devanagari",sans-serif; font-size:1.2rem; font-weight:500; letter-spacing:0; color:var(--scale); margin-top:8px; }
+.lede { font-size:1.05rem; }
+.layout { gap:0; }
+.panel { border:0; border-top:2px solid var(--ink); border-radius:0; padding:20px 0 28px; }
+.field-label,.mode-group { font-size:.9rem; font-weight:500; }
+.readout-title { font-stretch:115%; font-size:1.5rem; font-weight:700; color:var(--ink); letter-spacing:-.01em; }
+.chip { border-radius:999px; min-height:46px; background:var(--soft); border-color:transparent; }
+.seg { border-radius:999px; background:var(--soft); border-color:transparent; padding:3px; }
+.seg button { border-radius:999px; }
+.seg button + button, .seg .val + button, .seg .val { border-left:0; }
+select { border-radius:16px; background:var(--soft); border-color:transparent; font-weight:600; font-size:1.05rem; }
+.dice { border-radius:999px; background:var(--soft); border-color:transparent; width:40px; height:40px; }
+.drone-btn { border-radius:999px; min-height:48px; padding:0 20px; border-width:2px; }
+.play { border-radius:999px; min-height:54px; font-size:1.05rem; font-weight:700; }
+.play.alt { border-width:2px; }
+.sing { border:0; padding:8px 0 4px; text-align:left; }
+.sing-now { font-stretch:125%; font-size:6.5rem; font-weight:800; line-height:.9; letter-spacing:-.04em; }
+.sing-next { font-size:1.05rem; margin-top:6px; }
+.piano { width:100%; }
+.key.white { border-radius:999px; border:2px solid var(--bg); }
+.key.black { border-radius:999px; border:2px solid var(--bg); }
+.key.on.black { box-shadow:none; }
+.key.on.white, .key.root.white, .key.on.black, .key.root.black { border-color:var(--bg); }
+.key { padding-right:16px; }
+.key.white:not(.on):not(.root) { color:#0d1f2b; }
+.tuner { border:0; padding:8px 0; text-align:left; }
+.t-note { font-stretch:125%; font-size:3.4rem; }
+.meter { background:var(--soft); border-radius:999px; }
+.meter .zone { border-radius:999px; }
+.howto summary { color:var(--scale); }
+details.adv > summary { font-stretch:115%; font-size:1.25rem; font-weight:700; }
+@media (min-width:800px) { .layout { column-gap:56px; } }
+
+/* keys outside the raga: solid and quiet instead of see-through */
+.key.off { opacity:1; }
+.key.off.white { background:var(--off-white); border-color:var(--off-edge); color:var(--muted); }
+.key.off.black { background:var(--black-key); border-color:var(--black-key); color:var(--off-black-ink); }
+.key.off .num { background:transparent; }
+.key.off.white, .key.off.black { border-color:var(--bg); }
