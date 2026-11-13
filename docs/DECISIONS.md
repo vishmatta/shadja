@@ -4,6 +4,11 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-13
 
+- **Guided practice session** ([#28](https://github.com/vishmatta/shadja/issues/28)).
+  - "Start practice" in Hindustani mode runs five timed steps: Settle on Sa (20%), Sa, Pa and upper Sa (10%), Up and down the raga (20%), Warm-up pattern (20%) and The raga's signature phrase (30%). Length is 5, 10 or 20 minutes; the choice is saved as `sessMin` (default 10).
+  - Step 2 uses Ma instead of Pa when the raga has no Pa.
+  - Settings are restored at the end: play order, speed and loop, and the drone only if the session started it. The panel is hidden in Western mode, and changing the raga, switching to Western or Reset to defaults ends a running session.
+  - Still to confirm: the step order and timings are a starting guess; and step 5 loops the pakad rather than running call and response.
 - **Call and response checks the sung answer with the tuner** ([#18](https://github.com/vishmatta/shadja/issues/18)).
   - With the tuner on, the held notes it finishes during the user's turn (the same segments that feed the tuner history, in both feedback modes, after the silence and own-sound gates) are compared with the phrase by pitch class, so the right note in another octave counts. Anything sounding when the turn starts is closed off first, and nothing is collected during the call or the replay, so the app never grades its own sound.
   - `checkPhrase(target, sung)` is a pure edit-distance alignment: one missed or extra note does not turn later notes wrong, and a run of identical target notes can be met by one sung note. It returns right (with cents), wrong (with the note sung) or missed per target note, plus a count of extra notes. Chips reuse `.echo-note.ok/.no`; a "didn't hear any notes" message replaces all-missed when nothing was detected.

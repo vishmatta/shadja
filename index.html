@@ -202,6 +202,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
 .hold-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(54px, 1fr)); gap: 6px; margin: 6px 0 12px; }
 .hold .lvl { height: 14px; margin: 12px 0 6px; }
 .hold-msg { font-weight: 600; min-height: 1.4em; margin: 0; }
+#sessTime { font-family: var(--display); font-size: 2.8rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1; margin: 6px 0 4px; }
 @media (prefers-reduced-motion: reduce) { .lvl-bar { transition: none; } }
 .warn { margin: -4px 0 14px; font-size: .85rem; font-weight: 600; color: var(--bad); }
 .dirline { display: block; }
@@ -274,6 +275,30 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   <p class="lede">Learn Hindustani ragas by ear: pick your Sa, start the drone, and sing along with each raga’s phrases. Western scales are one tap away.</p>
 
   <div class="layout">
+      <div class="panel" id="sessPanel">
+        <p class="readout-title">Today’s practice</p>
+        <div id="sessIdle">
+          <p class="hint">A short guided session: the app sets everything up for each step. You just sing.</p>
+          <span class="field-label" id="sessLenLabel">Session length</span>
+          <div class="seg" role="group" aria-labelledby="sessLenLabel">
+            <button type="button" id="sessMin5" aria-pressed="false">5 min</button>
+            <button type="button" id="sessMin10" aria-pressed="false">10 min</button>
+            <button type="button" id="sessMin20" aria-pressed="false">20 min</button>
+          </div>
+          <div class="play-row"><button type="button" class="play" id="sessStart">Start practice</button></div>
+        </div>
+        <div id="sessRun" hidden>
+          <p class="field-label" id="sessStep"></p>
+          <p class="hint" id="sessHint"></p>
+          <div id="sessTime" aria-label="Time left in this step"></div>
+          <div class="play-row">
+            <button type="button" class="play alt" id="sessBack">Back</button>
+            <button type="button" class="play" id="sessNext">Next</button>
+            <button type="button" class="play alt" id="sessEnd">End session</button>
+          </div>
+        </div>
+        <p class="hint" id="sessLive" aria-live="polite"></p>
+      </div>
       <div class="panel">
         <span class="field-label" id="sysLabel">System</span>
         <div class="seg wide sys" role="group" aria-labelledby="sysLabel">
@@ -625,8 +650,9 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     system: 'raga', root: 0, scale: 'Yaman', base: 1, flats: false, lock: false,
     octave: 3, mode: 'aroha', enabled: {}, ord: null, ordCount: 0, ordSig: '', strict: true, lastTap: null, subset: false,
     drone: false, droneVol: 45, droneStyle: 'both', bpm: 80, loop: false, tunerMode: 'ear', keepAwake: true,
-    micClean: true, micId: ''
+    micClean: true, micId: '', sessMin: 10
   };
+  var sess = { on: false, i: 0, ends: 0, timer: null, saved: null };
 
   var $ = function (id) { return document.getElementById(id); };
   var names = function () { return state.flats ? FLAT : SHARP; };
@@ -695,6 +721,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     scaleSel.value = state.scale;
   }
   function changeScale(name) {
+    sessEnd();
     var n = enabledCount(), wasFull = n === scaleNotes().length;
     state.scale = name;
     scaleSel.value = name;
@@ -704,6 +731,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   }
   function setSystem(sys) {
     if (state.system === sys) return;
+    sessEnd();
     stopPlay(true); echoReset();
     state.system = sys;
     state.scale = sys === 'raga' ? 'Yaman' : 'Major (Ionian)';
@@ -1115,6 +1143,81 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     echoReset();
     startSeq(seq, { tagged: tagged, loop: state.loop });
   }
+
+  // Guided practice session (Hindustani only): five timed steps that set the drone, speed, loop and play order.
+  // While it runs, saveSettings stores the pre-session mode, bpm and loop (sess.saved), not the temporary ones.
+  var SESS_STEPS = [
+    { share: 0.2, title: 'Settle on Sa', hint: 'The drone is playing Sa, your home note. Hum or sing Sa and hold it until your voice blends with the drone.' },
+    { share: 0.1, title: 'Sa, Pa and upper Sa', hint: 'These are the anchor notes. Sing each one along with the piano.', bpm: 50 },
+    { share: 0.2, title: 'Up and down the raga', hint: 'Aroha is the way up, avaroha is the way down. Sing along, slowly.', mode: 'both', bpm: 60 },
+    { share: 0.2, title: 'Warm-up pattern', hint: 'An alankar is a repeating pattern that trains your voice to move between notes. Sing along.', mode: 'al2', bpm: 60 },
+    { share: 0.3, title: 'The raga’s signature phrase', hint: 'The pakad is the phrase that makes this raga recognisable. Listen once, then sing with it.', mode: 'pakad', bpm: 60 }
+  ];
+  function sessFifth() { return scaleNotes().indexOf(7) > -1 ? 7 : 5; }
+  function sessTitle(i) {
+    if (i === 1 && sessFifth() === 5) return 'Sa, Ma and upper Sa';
+    return SESS_STEPS[i].title;
+  }
+  function sessTimeText() {
+    var s = Math.max(0, Math.ceil((sess.ends - performance.now()) / 1000));
+    $('sessTime').textContent = Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60);
+  }
+  function sessGo(i) {
+    var st = SESS_STEPS[i];
+    stopPlay();
+    sess.i = i;
+    sess.ends = performance.now() + Math.round(state.sessMin * 60000 * st.share);
+    state.loop = true; player.loop = true;
+    if (st.mode) state.mode = st.mode;
+    if (st.bpm) state.bpm = st.bpm;
+    $('bpm').value = state.bpm;
+    $('sessLive').textContent = 'Step ' + (i + 1) + ' of ' + SESS_STEPS.length + ': ' + sessTitle(i);
+    render();
+    if (i === 1) startSeq([0, sessFifth(), 12, sessFifth(), 0], { loop: true });
+    else if (st.mode) play(false);
+  }
+  function sessStart() {
+    if (sess.on || !isRaga()) return;
+    sess.saved = { mode: state.mode, bpm: state.bpm, loop: state.loop, droneWasOn: state.drone };
+    sess.on = true; sess.i = 0;
+    sess.timer = setInterval(sessTick, 250);
+    sessGo(0);
+    if (!state.drone) setDrone(true);
+  }
+  function sessTick() {
+    if (!sess.on) return;
+    if (performance.now() >= sess.ends) { sessNext(); return; }
+    sessTimeText();
+  }
+  function sessNext() {
+    if (!sess.on) return;
+    if (sess.i >= SESS_STEPS.length - 1) {
+      sessEnd();
+      $('sessLive').textContent = 'Session finished. Well practised.';
+      return;
+    }
+    sessGo(sess.i + 1);
+  }
+  function sessBack() { if (sess.on && sess.i > 0) sessGo(sess.i - 1); }
+  // Ends the session and puts back the saved mode, speed and loop; the drone stops only if the session started it.
+  function sessEnd() {
+    if (!sess.on) return;
+    clearInterval(sess.timer); sess.timer = null;
+    stopPlay();
+    var sv = sess.saved;
+    state.mode = sv.mode; state.bpm = sv.bpm; state.loop = sv.loop; player.loop = sv.loop;
+    sess.on = false; sess.saved = null;
+    $('sessLive').textContent = '';
+    $('bpm').value = state.bpm;
+    if (!sv.droneWasOn && state.drone) setDrone(false); else render();
+  }
+  $('sessStart').addEventListener('click', sessStart);
+  $('sessBack').addEventListener('click', sessBack);
+  $('sessNext').addEventListener('click', sessNext);
+  $('sessEnd').addEventListener('click', sessEnd);
+  [5, 10, 20].forEach(function (m) {
+    $('sessMin' + m).addEventListener('click', function () { state.sessMin = m; render(); });
+  });
 
   // Sing-along display
   function noteName(n) { return isRaga() ? octSpan(SARGAM[pcOf(n)], n) : names()[(state.root + pcOf(n)) % 12]; }
@@ -1729,7 +1832,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   // when it's visible, and on the next tap (iOS can refuse a request made outside a tap).
   var wake = { lock: null, pending: false };
   var wakeOK = !!(navigator.wakeLock && navigator.wakeLock.request);
-  function practising() { return !!(state.drone || player.on || tuner.on || echo.phase !== 'idle'); }
+  function practising() { return !!(state.drone || player.on || tuner.on || echo.phase !== 'idle' || sess.on); }
   function syncWake() {
     if (!wakeOK) return;
     var want = state.keepAwake && practising() && document.visibilityState === 'visible';
@@ -1774,6 +1877,16 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     $('tmLive').setAttribute('aria-pressed', String(state.tunerMode === 'live'));
     $('rulesWrap').hidden = !raga;
     $('ragaPanel').hidden = !raga;
+    $('sessPanel').hidden = !raga;
+    $('sessIdle').hidden = sess.on; $('sessRun').hidden = !sess.on;
+    [5, 10, 20].forEach(function (m) { $('sessMin' + m).setAttribute('aria-pressed', String(state.sessMin === m)); });
+    if (sess.on) {
+      $('sessStep').textContent = 'Step ' + (sess.i + 1) + ' of ' + SESS_STEPS.length + ': ' + sessTitle(sess.i);
+      $('sessHint').textContent = SESS_STEPS[sess.i].hint;
+      $('sessBack').disabled = sess.i === 0;
+      $('sessNext').textContent = sess.i === SESS_STEPS.length - 1 ? 'Finish' : 'Next';
+      sessTimeText();
+    }
     document.querySelector('.app').classList.toggle('raga-mode', raga);
     $('rndRoot').hidden = raga;
     $('saHint').hidden = !raga;
@@ -2024,7 +2137,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   // ---- Saved settings (one localStorage key; running states and note subsets are never saved) ----
   var SETTINGS_KEY = 'shadja:settings', SETTINGS_VER = 1;
   var SAVED_FIELDS = ['system', 'root', 'octave', 'scale', 'mode', 'bpm', 'loop', 'strict', 'lock', 'flats', 'base',
-    'droneStyle', 'droneVol', 'tunerMode', 'micClean', 'micId', 'keepAwake'];
+    'droneStyle', 'droneVol', 'tunerMode', 'micClean', 'micId', 'keepAwake', 'sessMin'];
   var MODES = {
     raga: ['aroha', 'avaroha', 'both', 'pakad', 'rnd', 'al2', 'al3', 'al4'],
     western: ['asc', 'desc', 'rnd']
@@ -2036,6 +2149,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   function pickSettings() {
     var o = { v: SETTINGS_VER };
     SAVED_FIELDS.forEach(function (k) { o[k] = state[k]; });
+    if (sess.on) { o.mode = sess.saved.mode; o.bpm = sess.saved.bpm; o.loop = sess.saved.loop; }
     return o;
   }
   // Writes only when something changed; when everything is at its default the key is removed.
@@ -2072,6 +2186,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       if (typeof d[k] === 'boolean') state[k] = d[k];
     });
     if (typeof d.micId === 'string' && d.micId.length <= 512) state.micId = d.micId;
+    if ([5, 10, 20].indexOf(d.sessMin) > -1) state.sessMin = d.sessMin;
   }
   // Pushes state into controls that render() does not set (selects, sliders, player flags).
   function syncControls() {
@@ -2094,6 +2209,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     settingsSavedStr = raw;
   }
   function resetSettings() {
+    sessEnd();
     stopPlay(true); echoReset();
     if (state.drone) setDrone(false);
     tunerStop(); hold.target = 0; hold.len = 5;
