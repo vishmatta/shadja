@@ -196,6 +196,13 @@ details.adv[open] > summary { margin-bottom: 12px; }
 .lvl-bar { height: 100%; width: 0; background: var(--scale); transition: width .15s; }
 .lvl-gate { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; background: var(--ink); }
 .mic-box .mic-check { white-space: pre-line; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hold { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
+.hold [hidden] { display: none; }
+.hold .hint { margin: 4px 0 10px; }
+.hold-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(54px, 1fr)); gap: 6px; margin: 6px 0 12px; }
+.hold .lvl { height: 14px; margin: 12px 0 6px; }
+.hold-msg { font-weight: 600; min-height: 1.4em; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .lvl-bar { transition: none; } }
 .warn { margin: -4px 0 14px; font-size: .85rem; font-weight: 600; color: var(--bad); }
 .dirline { display: block; }
 .numbers.split { font-size: 1.5rem; }
@@ -403,6 +410,22 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
         <div class="t-hist-wrap" id="tHistWrap" hidden>
           <span class="field-label" id="tHistLabel">Your last notes (newest on the right)</span>
           <div class="echo-notes" id="tHist" role="group" aria-labelledby="tHistLabel"></div>
+        </div>
+        <div class="hold" id="holdBox">
+          <span class="field-label" id="holdTitle">Hold a note</span>
+          <p class="hint">Holding one note steadily is the first singing skill. Pick a note, start the exercise, then sing it and keep it as even as you can. Turn the drone on to find the note.</p>
+          <button type="button" class="play" id="holdBtn" aria-pressed="false">Start hold exercise</button>
+          <span class="field-label" id="holdNoteLabel" style="margin-top:12px">Note to hold</span>
+          <div class="hold-notes" id="holdNotes" role="group" aria-labelledby="holdNoteLabel"></div>
+          <span class="field-label" id="holdLenLabel">Hold for 5 seconds</span>
+          <div class="seg" role="group" aria-labelledby="holdLenLabel">
+            <button type="button" id="holdDn" aria-label="Shorter hold">−</button>
+            <span class="val" id="holdVal">5 s</span>
+            <button type="button" id="holdUp" aria-label="Longer hold">+</button>
+          </div>
+          <div class="lvl" id="holdBar" role="progressbar" aria-label="Hold progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0" hidden><div class="lvl-bar" id="holdFill"></div></div>
+          <p class="hold-msg" id="holdMsg"></p>
+          <div class="echo-result" id="holdResult" aria-live="polite"></div>
         </div>
         <details class="howto mic-box" id="micBox">
           <summary>Mic settings and check</summary>
@@ -1110,7 +1133,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   // Analysis runs every 50 ms ("frame"). A note needs MIN_FRAMES of clear pitch (0.35 s); the first ATTACK frames and the
   // last RELEASE frame are left out of the verdict. A new note starts only after CONFIRM frames in a row sit more than
   // JUMP cents from the current one, so a single stray frame can't split a held note. GAP pitchless frames end a note.
-  var TN = { frame: 0.05, minFrames: 7, attack: 2, release: 1, jump: 70, confirm: 3, gap: 5, clarity: 0.7, hist: 6 };
+  var TN = { frame: 0.05, minFrames: 7, attack: 2, release: 1, jump: 70, confirm: 3, gap: 5, clarity: 0.7, hist: 6, zone: 20 };
   var tuner = { on: false, stream: null, src: null, an: null, timer: null, buf: null, seg: null, silent: 0, pend: [], floor: 0.003, hist: [],
     k: null, cal: 0, calR: [], outH: [], tick: 0, info: null };
   // Returns { f: Hz or null, rms }. gate: the input level below which a frame counts as silence.
@@ -1169,7 +1192,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       return ['off', name + ' isn’t in ' + (isRaga() ? state.scale : 'this scale') + '. Nearest notes: ' + nm(nb[0]) + ' or ' + nm(nb[1]) + '.' + (extra || '')];
     }
     var a = Math.abs(cents);
-    if (a <= 20) return ['ok', 'In tune (within 20¢).' + (extra || '')];
+    if (a <= TN.zone) return ['ok', 'In tune (within 20¢).' + (extra || '')];
     return ['off', Math.round(a) + '¢ ' + (cents > 0 ? 'sharp: sing slightly lower.' : 'flat: sing slightly higher.') + (extra || '')];
   }
   function median(arr) { var b = arr.slice().sort(function (p, q) { return p - q; }); return b[b.length >> 1]; }
@@ -1245,11 +1268,13 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     if (!p.f) {
       tuner.floor = Math.max(0.0005, Math.min(0.05, tuner.floor + 0.1 * (p.rms - tuner.floor)));
       tuner.pend = [];
+      holdFrame(null);
       if (++tuner.silent >= TN.gap) finishSeg();
       return;
     }
     tuner.silent = 0;
     var tc = totalCents(p.f), sg = tuner.seg;
+    holdFrame(tc);
     if (sg && Math.abs(tc - segRef(sg)) > TN.jump) {
       tuner.pend.push(tc);                                              // maybe a new note, maybe a glitch: wait and see
       if (tuner.pend.length < TN.confirm) return;
@@ -1267,6 +1292,122 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     }
     tunerStatus('Hearing a note… hold it, then stop or move on.');
   }
+  // Hold exercise: sing one target note (any octave) steadily. An attempt starts at the first voiced frame and ends when the
+  // hold length is reached (in tune time in Live mode, time sung in After each note) or after HOLD.silence quiet frames.
+  var HOLD = { steps: [5, 8, 12, 20], silence: 12, minSing: 20, attack: 2, minFrames: 10, steady: 12, onNote: 5, okShare: 0.8 };
+  var hold = { on: false, target: 0, len: 5, run: null, armed: true, quiet: 0, sig: '', fin: 0 };
+  function holdName(pc) { return isRaga() ? SARGAM[pc] : names()[(state.root + pc) % 12]; }
+  function holdOffset(tc, pc) { return ((tc - pc * 100 + 600) % 1200 + 1200) % 1200 - 600; }  // cents from the target, any octave
+  function holdAbort() { hold.run = null; hold.fin = 0; hold.armed = true; hold.quiet = 0; renderHold(); }
+  function holdStop() {
+    hold.on = false; hold.run = null; hold.fin = 0; hold.armed = true; hold.quiet = 0;
+    $('holdResult').innerHTML = '';
+    renderHold();
+  }
+  function holdFrame(tc) {
+    if (!hold.on) return;
+    var r = hold.run;
+    if (tc === null) {
+      hold.quiet++;
+      if (r) { if (++r.sil >= HOLD.silence) holdEnd('stopped'); }
+      else if (!hold.armed && hold.quiet >= HOLD.silence) hold.armed = true;   // quiet again: ready for another try
+      return;
+    }
+    hold.quiet = 0;
+    if (!hold.armed) return;
+    if (!r) { r = hold.run = { f: 0, tc: [], d: [], tin: 0, sil: 0 }; hold.fin = 0; $('holdResult').innerHTML = ''; }
+    r.sil = 0;
+    if (++r.f > HOLD.attack) {                                           // the first ~100 ms (attack) is left out
+      var d = holdOffset(tc, hold.target);
+      r.tc.push(tc); r.d.push(d);
+      if (Math.abs(d) <= TN.zone) r.tin++;
+      if ((state.tunerMode === 'live' ? r.tin : r.d.length) * TN.frame >= hold.len - 1e-6) { holdEnd('done'); return; }
+    }
+    holdDraw();
+  }
+  function holdDraw() {
+    var r = hold.run, live = state.tunerMode === 'live', v = r ? Math.min(hold.len, (live ? r.tin : r.d.length) * TN.frame) : hold.fin;
+    $('holdBar').hidden = !hold.on;
+    $('holdBar').setAttribute('aria-valuemax', hold.len);
+    $('holdBar').setAttribute('aria-valuenow', v.toFixed(1));
+    $('holdBar').setAttribute('aria-valuetext', v.toFixed(1) + ' of ' + hold.len + ' seconds');
+    $('holdFill').style.width = (v / hold.len * 100) + '%';
+    var m = '';
+    if (hold.on) {
+      if (!r) m = tuner.on ? 'Sing ' + holdName(hold.target) + ' and hold it.' : 'Starting the microphone…';
+      else if (!r.d.length) m = 'Hearing you…';
+      else if (!live) m = 'Keep holding… ' + v.toFixed(1) + ' s sung';
+      else { var d = r.d[r.d.length - 1]; m = Math.abs(d) <= TN.zone ? 'In tune. Keep it going.' : d > 0 ? 'A little high: ease down.' : 'A little low: lift up.'; }
+    }
+    if ($('holdMsg').textContent !== m) $('holdMsg').textContent = m;
+  }
+  function holdEnd(why) {
+    var r = hold.run, live = state.tunerMode === 'live';
+    hold.fin = r ? Math.min(hold.len, (live ? r.tin : r.d.length) * TN.frame) : 0;
+    hold.run = null; hold.quiet = 0; hold.armed = false;
+    if (!r || r.f < HOLD.minSing || r.d.length < HOLD.minFrames) {
+      hold.armed = true;
+      $('holdResult').innerHTML = '<p>That was too short to judge. Hold the note for at least a second.</p>';
+      holdDraw();
+      return;
+    }
+    var n = r.d.length, mean = r.d.reduce(function (a, b) { return a + b; }, 0) / n;
+    var sd = Math.sqrt(r.d.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / n);
+    var tin = r.tin * TN.frame, sungPc = pcOf(Math.round(median(r.tc) / 100)), tgt = holdName(hold.target);
+    var wrong = sungPc !== hold.target && r.tin < 0.2 * n;
+    var ok = why === 'done' && (live || tin >= HOLD.okShare * hold.len);
+    var lines = [];
+    if (wrong) lines.push('You held ' + holdName(sungPc) + ', the target was ' + tgt + '.');
+    lines.push('In tune for ' + tin.toFixed(1) + ' of ' + hold.len + ' seconds' + (wrong ? '.' : ok ? '. Well held.' : '.'));
+    if (!wrong) {
+      var a = Math.round(Math.abs(mean));
+      lines.push(Math.abs(mean) <= HOLD.onNote ? 'Pitch: on the note.' : 'Pitch: about ' + a + '¢ ' + (mean < 0 ? 'flat.' : 'sharp.'));
+    }
+    var steady = sd < HOLD.steady;
+    lines.push('Steadiness: ' + (steady ? 'steady.' : 'wavering.'));
+    var tip = wrong ? 'Listen to the drone, then slide your voice until it matches ' + tgt + '.'
+      : Math.abs(mean) > HOLD.onNote * 2 ? (mean < 0 ? 'Try lifting the note slightly.' : 'Try easing the note down slightly.')
+      : !steady ? 'Breathe out slowly and evenly, and keep your jaw relaxed.'
+      : why === 'stopped' ? 'Take a fuller breath before you start, so the note lasts.'
+      : 'Nicely done.';
+    if (ok) {
+      var i = HOLD.steps.indexOf(hold.len);
+      tip += i < HOLD.steps.length - 1 ? ' When you are ready, try ' + HOLD.steps[i + 1] + ' seconds.' : ' That is the longest hold here: try another note.';
+    }
+    lines.push(tip);
+    $('holdResult').innerHTML = lines.map(function (l) { return '<p>' + l + '</p>'; }).join('');
+    holdDraw();
+  }
+  function renderHold() {
+    var sig = state.system + '|' + state.scale + '|' + state.root;
+    if (sig !== hold.sig) { hold.sig = sig; hold.target = 0; hold.run = null; hold.fin = 0; hold.armed = true; $('holdResult').innerHTML = ''; }
+    var box = $('holdNotes');
+    box.innerHTML = '';
+    scaleNotes().forEach(function (pc) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.innerHTML = holdName(pc);
+      b.setAttribute('aria-label', 'Hold ' + holdName(pc));
+      b.setAttribute('aria-pressed', String(hold.target === pc));
+      b.addEventListener('click', function () { hold.target = pc; hold.run = null; hold.fin = 0; hold.armed = true; $('holdResult').innerHTML = ''; renderHold(); });
+      box.appendChild(b);
+    });
+    var i = HOLD.steps.indexOf(hold.len);
+    $('holdLenLabel').textContent = 'Hold for ' + hold.len + ' seconds';
+    $('holdVal').textContent = hold.len + ' s';
+    $('holdDn').disabled = i <= 0; $('holdUp').disabled = i >= HOLD.steps.length - 1;
+    $('holdBtn').textContent = hold.on ? 'Stop exercise' : 'Start hold exercise';
+    $('holdBtn').setAttribute('aria-pressed', String(hold.on));
+    holdDraw();
+  }
+  $('holdBtn').addEventListener('click', function () {
+    if (hold.on) { holdStop(); return; }
+    hold.on = true; hold.run = null; hold.armed = true; hold.quiet = 0; $('holdResult').innerHTML = '';
+    if (!tuner.on) tunerStart();
+    renderHold();
+  });
+  function holdStep(dir) { var i = HOLD.steps.indexOf(hold.len) + dir; if (i >= 0 && i < HOLD.steps.length) { hold.len = HOLD.steps[i]; hold.run = null; hold.fin = 0; hold.armed = true; renderHold(); } }
+  $('holdDn').addEventListener('click', function () { holdStep(-1); });
+  $('holdUp').addEventListener('click', function () { holdStep(1); });
   // Mic settings and check: what the browser actually gave us, a level meter, and how much drone leaks in.
   function micShow(rms, gate) {
     var db = function (x) { return Math.max(0, Math.min(100, (20 * Math.log10(Math.max(x, 1e-6)) + 60) / 60 * 100)); };
@@ -1329,6 +1470,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     });
   }
   function tunerStop() {
+    holdStop();
     clearInterval(tuner.timer); tuner.timer = null;
     if (tuner.stream) tuner.stream.getTracks().forEach(function (t) { t.stop(); });
     if (tuner.src) tuner.src.disconnect();
@@ -1340,7 +1482,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   function tunerRestart() { if (tuner.on) { tunerStop(); tunerStart(); } }
   $('tunerBtn').addEventListener('click', function () { if (tuner.on) { tunerStop(); tunerShow(null, null, 'Tuner stopped.', '', null); } else tunerStart(); });
   [['tmEar', 'ear'], ['tmLive', 'live']].forEach(function (pm) {
-    $(pm[0]).addEventListener('click', function () { state.tunerMode = pm[1]; tuner.seg = null; tuner.pend = []; render(); });
+    $(pm[0]).addEventListener('click', function () { state.tunerMode = pm[1]; tuner.seg = null; tuner.pend = []; holdAbort(); render(); });
   });
   bindSeg('mcOff', 'mcOn', function (v) { state.micClean = v; tunerRestart(); });
   $('micCal').addEventListener('click', function () {
@@ -1559,6 +1701,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     if (!player.on && echo.phase === 'idle') singIdle();
     renderEcho();
     $('tunerBtn').textContent = tuner.on ? 'Stop tuner' : 'Start tuner';
+    renderHold();
     $('tmEar').setAttribute('aria-pressed', String(state.tunerMode === 'ear'));
     $('tmLive').setAttribute('aria-pressed', String(state.tunerMode === 'live'));
     $('rulesWrap').hidden = !raga;
@@ -1885,7 +2028,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   function resetSettings() {
     stopPlay(true); echoReset();
     if (state.drone) setDrone(false);
-    tunerStop();
+    tunerStop(); hold.target = 0; hold.len = 5;
     try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
     settingsSavedStr = '';
     SAVED_FIELDS.forEach(function (k) { state[k] = settingsDefaults[k]; });
