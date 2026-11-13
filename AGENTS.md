@@ -6,7 +6,7 @@ Rules and context for AI coding agents working in this repo. Keep this file unde
 Shadja is a personal web app for learning Hindustani classical ragas by ear and by singing, with a Western scales mode kept behind a toggle. The only user is Vishal, an absolute beginner who practises by singing.
 
 - Live: https://vishmatta.github.io/shadja/ (GitHub Pages, branch `main`, repo root)
-- The whole app is `index.html`: vanilla JS, Web Audio API, no framework, no build step. The only external resource is Google Fonts (Bricolage Grotesque).
+- The whole app is `index.html`: vanilla JS, Web Audio API, no framework, no build step. The only external resource is Google Fonts (Eczar for display, Mukta for text).
 
 ## Hard constraints
 - Hindustani-first. Never remove or break Western mode (`state.system === 'western'`).
