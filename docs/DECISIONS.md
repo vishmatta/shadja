@@ -4,6 +4,11 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-13
 
+- **Call and response checks the sung answer with the tuner** ([#18](https://github.com/vishmatta/shadja/issues/18)).
+  - With the tuner on, the held notes it finishes during the user's turn (the same segments that feed the tuner history, in both feedback modes, after the silence and own-sound gates) are compared with the phrase by pitch class, so the right note in another octave counts. Anything sounding when the turn starts is closed off first, and nothing is collected during the call or the replay, so the app never grades its own sound.
+  - `checkPhrase(target, sung)` is a pure edit-distance alignment: one missed or extra note does not turn later notes wrong, and a run of identical target notes can be met by one sung note. It returns right (with cents), wrong (with the note sung) or missed per target note, plus a count of extra notes. Chips reuse `.echo-note.ok/.no`; a "didn't hear any notes" message replaces all-missed when nothing was detected.
+  - Tapped keys win: if any key was tapped during the turn the old tap check runs unchanged, and with the tuner off nothing changes. New "Check my singing with the mic" button starts or stops the tuner.
+  - Unverified on a real voice, and with the drone playing through a speaker (tested with a synthetic mic only).
 - **Hold a note exercise in the tuner panel** ([#29](https://github.com/vishmatta/shadja/issues/29)).
   - Pick a target note (chips for the raga or scale notes, Sa by default; reset to Sa when the raga, scale or Sa changes) and a hold length of 5, 8, 12 or 20 seconds, then sing it. The attempt starts at the first voiced frame (after the existing silence and own-sound gates, so the drone can stay on), skips the first 100 ms, and compares by pitch class, so any octave counts. It ends when the hold length is reached or after 0.6 s of quiet following at least 1 s of singing; it then re-arms once the voice has been quiet.
   - Two feedback behaviours follow the tuner mode. After each note: the bar shows time sung, with no in-tune information while singing; the attempt ends at the hold length, and counts as a success if at least 80% of it was in tune. Live: the bar fills only while in tune and pauses when you drift; the attempt ends when in-tune time reaches the hold length.
