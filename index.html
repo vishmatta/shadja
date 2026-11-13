@@ -10,7 +10,7 @@
 :root {
   color-scheme: light;
   --off-white:#fffaf2; --off-edge:#cfc4e2; --off-black-ink:#b9aee0; --bg:#efe9f6; --panel:#fffdfb; --ink:#231a3f; --muted:#6a5f88; --line:#dcd2ea;
-  --scale:#4a39b8; --scale-ink:#fff; --root:#f39a1c; --root-ink:#231a3f;
+  --scale:#4a39b8; --scale-ink:#fff; --root:#f39a1c; --root-ink:#231a3f; --root-text:#984f00;
   --white-key:#fffaf2; --white-edge:#cfc4e2; --black-key:#2a1f4d; --bad:#c2243e;
   --sky: linear-gradient(180deg,#c9b9f2 0%,#f3c3c0 58%,#ffd98c 100%); --sky-ink:#231a3f; --sky-muted:#4d3f73;
   --font:"Mukta",system-ui,sans-serif; --display:"Eczar","Mukta",serif;
@@ -22,17 +22,17 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --off-white:#2b2450; --off-edge:#3b3266; --off-black-ink:#8d83b8; --bg:#120e25; --panel:#1b1636; --ink:#f2ecff; --muted:#a69dcb; --line:#322a5a;
-    --scale:#8f7dff; --scale-ink:#120d2b; --root:#ffb23a; --root-ink:#231a3f;
+    --scale:#8f7dff; --scale-ink:#120d2b; --root:#ffb23a; --root-ink:#231a3f; --root-text:#ffb23a;
     --white-key:#f4eefb; --white-edge:#3b3266; --black-key:#0a0718; --bad:#ff6b81;
-    --sky: linear-gradient(180deg,#1c1548 0%,#5a2f78 52%,#c9603f 88%,#f0a03c 100%); --sky-ink:#fff7ea; --sky-muted:#e6d5ee;
+    --sky: linear-gradient(180deg,#1c1548 0%,#47276e 60%,#8e3f58 90%,#c2613f 100%); --sky-ink:#fff7ea; --sky-muted:#f1e4f4;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --off-white:#2b2450; --off-edge:#3b3266; --off-black-ink:#8d83b8; --bg:#120e25; --panel:#1b1636; --ink:#f2ecff; --muted:#a69dcb; --line:#322a5a;
-  --scale:#8f7dff; --scale-ink:#120d2b; --root:#ffb23a; --root-ink:#231a3f;
+  --scale:#8f7dff; --scale-ink:#120d2b; --root:#ffb23a; --root-ink:#231a3f; --root-text:#ffb23a;
   --white-key:#f4eefb; --white-edge:#3b3266; --black-key:#0a0718; --bad:#ff6b81;
-  --sky: linear-gradient(180deg,#1c1548 0%,#5a2f78 52%,#c9603f 88%,#f0a03c 100%); --sky-ink:#fff7ea; --sky-muted:#e6d5ee;
+  --sky: linear-gradient(180deg,#1c1548 0%,#47276e 60%,#8e3f58 90%,#c2613f 100%); --sky-ink:#fff7ea; --sky-muted:#f1e4f4;
 }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
 * { box-sizing: border-box; }
@@ -85,7 +85,7 @@ select { font: inherit; width: 100%; padding: 10px 12px; min-height: 44px; borde
 .stepper-row .readout-title { margin: 0; }
 #cVal { min-width: 4.6em; }
 .numbers { font-size: 2rem; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; margin: 0 0 14px; word-spacing: .25em; }
-.numbers .r { color: var(--root); }
+.numbers .r { color: var(--root-text); }
 .hint { margin: 0 0 8px; font-size: .85rem; color: var(--muted); }
 .strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; margin-bottom: 14px; }
 .cell { aspect-ratio: 1 / 1.25; border-radius: 5px; display: grid; place-items: center; font-size: .78rem; font-weight: 600; font-variant-numeric: tabular-nums; border: 1px solid var(--line); color: var(--muted); }
@@ -203,7 +203,7 @@ details.adv[open] > summary { margin-bottom: 12px; }
 /* Sandhya (dusk) theme */
 body { font-size:17px; background: var(--bg); }
 h1 { font-family:var(--display); font-weight:700; font-size:2.3rem; letter-spacing:-.01em; line-height:1.1; display:flex; align-items:baseline; gap:12px; }
-h1 .deva { font-weight:500; font-size:1.3rem; color:var(--root); }
+h1 .deva { font-weight:500; font-size:1.3rem; color:var(--root-text); }
 .lede { font-size:1.02rem; }
 .panel { border-radius:22px; border-color:transparent; padding:20px 18px; box-shadow:0 1px 0 var(--line), 0 12px 32px -22px rgba(35,26,63,.45); }
 .field-label,.readout-title,.mode-group { font-size:.9rem; font-weight:600; }
@@ -239,6 +239,25 @@ details.adv > summary { font-family:var(--display); font-size:1.15rem; font-weig
 .key.off.white { background:var(--off-white); border-color:var(--off-edge); color:var(--muted); }
 .key.off.black { background:var(--black-key); border-color:var(--black-key); color:var(--off-black-ink); }
 .key.off .num { background:transparent; }
+/* a thin gap between neighbouring lit white keys so they don't merge into one block */
+.key.white.on, .key.white.root { box-shadow:inset 0 -2px 0 var(--panel); }
+.key.white.on.octave, .key.white.root.octave { box-shadow:inset 0 -2px 0 var(--panel), inset 0 0 0 2px rgba(26,30,58,.35); }
+/* focus rings: visible on every surface (keys and pressed buttons are scale-coloured, so the ring uses ink) */
+.key:focus-visible { outline:3px solid var(--ink); outline-offset:-4px; z-index:4; }
+.seg button:focus-visible { outline:2px solid var(--ink); outline-offset:-3px; }
+input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offset:4px; border-radius:6px; }
+.adv .readout-title { font-size:1.05rem; }
+.play:disabled { opacity:.55; }
+/* desktop: keep the whole stage inside one screen height */
+@media (min-width: 800px) {
+  .sing { padding:14px 12px 12px; }
+  .sing-now { font-size:3.4rem; }
+  .sing-next { margin-top:2px; font-size:.95rem; }
+  .piano { margin:8px 0; }
+  .piano-wrap { padding:4px 0; }
+  .stage { padding-bottom:14px; }
+  .stage .play-row { margin-top:8px; }
+}
 @media (prefers-reduced-motion: reduce) { .key { transition: none; } .key.bad { animation: none; } }
 </style>
 </head>

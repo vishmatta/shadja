@@ -2,6 +2,17 @@
 
 A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HANDOFF.md stays frozen as a snapshot. Where an entry here contradicts it, **this file wins**. Newest first. Each entry links to its pull request or issue.
 
+## 2026-11-13
+
+- **Visual redesign: the "Sandhya (dusk)" theme** ([#27](https://github.com/vishmatta/shadja/pull/27)).
+  - New palette (dusk purples with a saffron Sa), in light and dark.
+  - Fonts **Eczar** (display) and **Mukta** (text) replace Bricolage Grotesque.
+  - The sing-along display sits on a sky gradient, and the heading carries the Devanagari षड्ज.
+  - Keys for notes outside the raga are now solid and quiet instead of see-through.
+  - Polish pass: contrast checked to WCAG AA in both themes, visible focus rings, and the desktop stage fits one 790 px screen again.
+  - *Why:* Yaman, the first raga, is an evening raga, so the app should feel like dusk. Vishal picked direction A of three mockups.
+  - **Still to confirm:** how it looks on Vishal's iPhone.
+
 ## 2026-11-09
 
 - **The repo About section and README were refreshed. HANDOFF.md stays frozen, and this file records changes instead.** *Why:* keep the original snapshot intact while giving agents an accurate current picture.
