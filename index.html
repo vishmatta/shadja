@@ -202,6 +202,8 @@ details.adv[open] > summary { margin-bottom: 12px; }
 .hold-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(54px, 1fr)); gap: 6px; margin: 6px 0 12px; }
 .hold .lvl { height: 14px; margin: 12px 0 6px; }
 .hold-msg { font-weight: 600; min-height: 1.4em; margin: 0; }
+/* While a session runs the step line already shows this text, so the live region is kept for screen readers only. */
+#sessRun:not([hidden]) ~ #sessLive { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #sessTime { font-family: var(--display); font-size: 2.8rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1; margin: 6px 0 4px; }
 @media (prefers-reduced-motion: reduce) { .lvl-bar { transition: none; } }
 .warn { margin: -4px 0 14px; font-size: .85rem; font-weight: 600; color: var(--bad); }
