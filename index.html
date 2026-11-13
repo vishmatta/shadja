@@ -477,6 +477,10 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
           <dt id="stepsT">Steps between notes (semitones)</dt><dd id="steps"></dd>
           <dt id="ordT" hidden>Random play order (#n on the piano)</dt><dd id="ordD" hidden></dd>
         </dl>
+        <div class="numbering" style="margin-top:16px">
+          <button type="button" class="drone-btn" id="resetBtn" aria-describedby="resetHint">Reset to defaults</button>
+          <p class="hint" id="resetHint" style="margin-top:8px">Sets every setting back to how the app first started and forgets the ones saved on this device.</p>
+        </div>
       </details>
   </div>
 </div>
@@ -935,6 +939,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   $('droneVol').addEventListener('input', function () {
     state.droneVol = +this.value;
     if (droneGain && ctx) droneGain.gain.setTargetAtTime(state.droneVol / 100, ctx.currentTime, 0.05);
+    saveSettings();
   });
 
   // sequences
@@ -1316,7 +1321,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       fillMics();
       render();
     }).catch(function (e) {
-      if (state.micId && e && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) { state.micId = ''; tunerStart(true); return; }
+      if (state.micId && e && (e.name === 'OverconstrainedError' || e.name === 'NotFoundError')) { state.micId = ''; saveSettings(); tunerStart(true); return; }
       var blocked = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
       tunerFail(blocked
         ? 'Microphone access was blocked. If you never saw a permission prompt, the claude.ai viewer may not allow the mic here; ask me for a version you can open directly in your browser.'
@@ -1342,7 +1347,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     if (tuner.on && state.drone) tunerCal();
     else tunerStatus(tuner.on ? 'Start the drone first.' : 'Start the tuner and the drone first.');
   });
-  $('micSel').addEventListener('change', function () { state.micId = this.value; tunerRestart(); });
+  $('micSel').addEventListener('change', function () { state.micId = this.value; saveSettings(); tunerRestart(); });
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', fillMics);
 
   // Call and response
@@ -1411,7 +1416,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   }
   $('echoNew').addEventListener('click', function () { echoStart(false); });
   $('echoAgain').addEventListener('click', function () { echoStart(true); });
-  $('bpm').addEventListener('input', function () { state.bpm = +this.value; $('bpmVal').textContent = state.bpm; });
+  $('bpm').addEventListener('input', function () { state.bpm = +this.value; $('bpmVal').textContent = state.bpm; saveSettings(); });
 
   function flash(i) {
     var el = document.querySelector('.key[data-i="' + i + '"]');
@@ -1533,7 +1538,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   document.addEventListener('visibilitychange', syncWake);
   document.addEventListener('pointerdown', syncWake, true);
 
-  function render() { renderNow(); refit(); syncWake(); }
+  function render() { renderNow(); refit(); syncWake(); saveSettings(); }
   function renderNow() {
     var N = names(), raga = isRaga(), iv = scaleNotes();
     var info = raga ? ragaInfo(state.scale) : null;
@@ -1803,6 +1808,95 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       $('ragaMeta').innerHTML = rows.map(function (row) { return '<dt>' + row[0] + '</dt><dd>' + row[1] + '</dd>'; }).join('');
     }
   }
+
+
+  // ---- Saved settings (one localStorage key; running states and note subsets are never saved) ----
+  var SETTINGS_KEY = 'shadja:settings', SETTINGS_VER = 1;
+  var SAVED_FIELDS = ['system', 'root', 'octave', 'scale', 'mode', 'bpm', 'loop', 'strict', 'lock', 'flats', 'base',
+    'droneStyle', 'droneVol', 'tunerMode', 'micClean', 'micId', 'keepAwake'];
+  var MODES = {
+    raga: ['aroha', 'avaroha', 'both', 'pakad', 'rnd', 'al2', 'al3', 'al4'],
+    western: ['asc', 'desc', 'rnd']
+  };
+  var settingsDefaults = {};
+  SAVED_FIELDS.forEach(function (k) { settingsDefaults[k] = state[k]; });
+  var settingsDefaultStr = JSON.stringify(settingsDefaults);
+  var settingsSavedStr = null;
+  function pickSettings() {
+    var o = { v: SETTINGS_VER };
+    SAVED_FIELDS.forEach(function (k) { o[k] = state[k]; });
+    return o;
+  }
+  // Writes only when something changed; when everything is at its default the key is removed.
+  function saveSettings() {
+    try {
+      var o = pickSettings(), cmp = {};
+      SAVED_FIELDS.forEach(function (k) { cmp[k] = o[k]; });
+      var str = JSON.stringify(cmp) === settingsDefaultStr ? '' : JSON.stringify(o);
+      if (str === settingsSavedStr) return;
+      if (str) localStorage.setItem(SETTINGS_KEY, str); else localStorage.removeItem(SETTINGS_KEY);
+      settingsSavedStr = str;
+    } catch (e) {}
+  }
+  function isInt(v, lo, hi) { return typeof v === 'number' && isFinite(v) && Math.floor(v) === v && v >= lo && v <= hi; }
+  function inList(v, list) { return typeof v === 'string' && list.indexOf(v) > -1; }
+  // Each value is checked on its own; a bad one is skipped so the default stays.
+  function applySettings(d) {
+    if (!d || typeof d !== 'object') return;
+    var sys = inList(d.system, ['raga', 'western']) ? d.system : settingsDefaults.system;
+    state.system = sys;
+    state.scale = sys === 'raga' ? 'Yaman' : 'Major (Ionian)';
+    state.mode = sys === 'raga' ? 'aroha' : 'asc';
+    var names = Object.keys(sys === 'raga' ? RAGAS : SCALES);
+    if (inList(d.scale, names) && Object.prototype.hasOwnProperty.call(sys === 'raga' ? RAGAS : SCALES, d.scale)) state.scale = d.scale;
+    if (inList(d.mode, MODES[sys])) state.mode = d.mode;
+    if (isInt(d.root, 0, 11)) state.root = d.root;
+    if (isInt(d.octave, 1, 6)) state.octave = d.octave;
+    if (isInt(d.bpm, 40, 160) && (d.bpm - 40) % 5 === 0) state.bpm = d.bpm;
+    if (isInt(d.droneVol, 0, 100)) state.droneVol = d.droneVol;
+    if (isInt(d.base, 0, 1)) state.base = d.base;
+    if (inList(d.droneStyle, ['steady', 'tanpura', 'both'])) state.droneStyle = d.droneStyle;
+    if (inList(d.tunerMode, ['ear', 'live'])) state.tunerMode = d.tunerMode;
+    ['loop', 'strict', 'lock', 'flats', 'micClean', 'keepAwake'].forEach(function (k) {
+      if (typeof d[k] === 'boolean') state[k] = d[k];
+    });
+    if (typeof d.micId === 'string' && d.micId.length <= 512) state.micId = d.micId;
+  }
+  // Pushes state into controls that render() does not set (selects, sliders, player flags).
+  function syncControls() {
+    fillSelect();
+    $('bpm').value = state.bpm;
+    $('droneVol').value = state.droneVol;
+    player.loop = state.loop;
+    setAuto(scaleNotes().length);
+    state.lastTap = null;
+  }
+  function loadSettings() {
+    var raw = null;
+    try { raw = localStorage.getItem(SETTINGS_KEY); } catch (e) { return; }
+    if (!raw) return;
+    var d = null;
+    try { d = JSON.parse(raw); } catch (e) { return; }
+    applySettings(d);
+    syncControls();
+    $('adv').open = state.system === 'western';
+    settingsSavedStr = raw;
+  }
+  function resetSettings() {
+    stopPlay(true); echoReset();
+    if (state.drone) setDrone(false);
+    tunerStop();
+    try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
+    settingsSavedStr = '';
+    SAVED_FIELDS.forEach(function (k) { state[k] = settingsDefaults[k]; });
+    state.subset = false; state.ord = null; state.ordCount = 0; state.ordSig = '';
+    syncControls();
+    $('micSel').value = '';
+    $('adv').open = true;
+    render();
+  }
+  $('resetBtn').addEventListener('click', resetSettings);
+  loadSettings();
 
   $('awakeRow').hidden = !wakeOK;
   // Raga rules start open on a wide screen, folded on a phone.

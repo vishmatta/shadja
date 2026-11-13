@@ -4,6 +4,11 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-13
 
+- **Settings are remembered between visits** ([#6](https://github.com/vishmatta/shadja/issues/6)).
+  - Saved in one `localStorage` key, `shadja:settings` (JSON with a version field), because the origin is shared with other GitHub Pages sites. Saved: system, Sa, octave, scale or raga (the one currently chosen, as the app keeps a single slot), play order, speed, loop, strict, scale-notes-only lock, accidentals, numbering, drone style and volume, tuner feedback, mic cleanup, chosen mic, keep screen on.
+  - Deliberately not saved: anything running (drone, playback, tuner, call and response), enabled-note subsets, practice subset and replay order. The app always starts stopped.
+  - Every value is validated on its own, so one bad value falls back to its default and the rest are kept. All storage access is in try/catch. When every setting equals its default the key is removed.
+  - Advanced has a **Reset to defaults** button: stops sound and tuner, forgets the saved key and restores the startup settings.
 - **Visual redesign: the "Sandhya (dusk)" theme** ([#27](https://github.com/vishmatta/shadja/pull/27)).
   - New palette (dusk purples with a saffron Sa), in light and dark.
   - Fonts **Eczar** (display) and **Mukta** (text) replace Bricolage Grotesque.
