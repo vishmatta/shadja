@@ -6,7 +6,7 @@ Rules and context for AI coding agents working in this repo. Keep this file unde
 Shadja is a personal web app for learning Hindustani classical ragas by ear and by singing, with a Western scales mode kept behind a toggle. The only user is Vishal, an absolute beginner who practises by singing.
 
 - Live: https://vishmatta.github.io/shadja/ (GitHub Pages, branch `main`, repo root)
-- The whole app is `index.html`: vanilla JS, Web Audio API, no framework, no build step. The only external resource is Google Fonts (Bricolage Grotesque).
+- The whole app is `index.html`: vanilla JS, Web Audio API, no framework, no build step. The only external resource is Google Fonts (Eczar for display, Mukta for text).
 
 ## Hard constraints
 - Hindustani-first. Never remove or break Western mode (`state.system === 'western'`).
@@ -27,6 +27,7 @@ Shadja is a personal web app for learning Hindustani classical ragas by ear and 
 - **Own-sound gate (mic vs drone):** all app sound goes through `outBus()` (never straight to `ctx.destination`), and `outLevel()` measures it. When the drone starts with the tuner on, `tunerCal` spends 2 s measuring `tuner.k` (mic level ÷ output level, 25th percentile of drone-like frames). After that, a frame is ignored unless the mic is at least `TN.bleed` (1.5×) louder than `k` × the loudest output in the last 0.4 s. The "Mic settings and check" box in the tuner panel holds the cleanup switch (`state.micClean` → `echoCancellation`, default on until Vishal's device test in #17), the mic picker (`state.micId` → `deviceId: {exact}`, falling back to the default mic), the level meter, and the diagnostics from `track.getSettings()`.
 - **Call and response:** `echoStart`, `echoTurn`, `echoAnswer`.
 - **Screen wake lock:** `syncWake` (called from `render()`, `visibilitychange` and the next tap) holds `navigator.wakeLock` while `practising()` is true (drone, playback, tuner or call and response) and `state.keepAwake` is on. The Advanced "Keep screen on" switch is the override; its row is hidden where the API is missing.
+- **Theme (Sandhya, dusk):** colours are CSS variables on `:root` and in the two identical dark blocks (`--sky` gradient behind `.sing`, `--display` Eczar font, `--off-white` for keys outside the raga, `--root-text` for orange text). The theme rules sit under `/* Sandhya (dusk) theme */` in the `<style>` block. Keep text at WCAG AA in both themes.
 - **Layout:** `.layout` is one column on phones (controls → stage → call and response → tuner → raga rules → advanced). From 800 px wide it is two columns, with the `#stage` panel (sing-along display, piano, Play buttons) pinned on the right. `fitKey`/`refit` shrink the keys (minimum 40 px) so the stage fits one screen height. Target devices: iPhone 17 Pro Max (Safari viewport about 440×763) and MacBook Air M1 (about 1440×790).
 
 ## Audio rules (learned the hard way)
