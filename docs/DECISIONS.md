@@ -2,6 +2,15 @@
 
 A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HANDOFF.md stays frozen as a snapshot. Where an entry here contradicts it, **this file wins**. Newest first. Each entry links to its pull request or issue.
 
+## 2026-11-16
+
+- **MIDI keyboard input with a harmonium voice.**
+  - A MIDI keyboard (built for an Arturia MiniLab MkII) plays a harmonium: two reeds an octave apart, held for as long as the key is down, with a sustain pedal. Keys play their real pitch (your Sa is the key matching the Sa you picked), and a "Keyboard octave" stepper (-3 to +3, saved as `midiOct`) and a "Harmonium volume" slider (saved as `midiVol`) sit in a new "MIDI keyboard" panel.
+  - MIDI notes go through the same rule path as the on-screen keys (`tapAllowed`): strict mode, aroha and avaroha moves, "Play scale notes only", the practice subset and call and response all apply, and a blocked note makes no sound.
+  - It connects with no click once the browser has remembered permission, and picks up a keyboard plugged in later. The tuner is untouched: MIDI never reads or changes tuner state, and the harmonium goes through the shared output bus so the tuner's own-sound gate hears it as app sound.
+  - Web MIDI needs Chrome or Edge; Safari does not support it.
+  - Still to confirm: the harmonium sound by ear, and the MiniLab MkII and pedal on the real device.
+
 ## 2026-11-13
 
 - **Guided practice session** ([#28](https://github.com/vishmatta/shadja/issues/28)).
