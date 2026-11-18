@@ -4,6 +4,11 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-18
 
+- **Code structure: split `index.html` into native ES modules, with no build step** ([#9](https://github.com/vishmatta/shadja/issues/9)).
+  - `index.html`, `style.css` and a `js/` folder of modules, one per existing script section. GitHub Pages serves them as is.
+  - Type checks (`// @ts-check`) and the committed tests from #23 run only in GitHub Actions; nothing the site loads is built.
+  - Order: #23 tests first, then a split with no behaviour changes, then features such as #44. Not started.
+  - *Supersedes the handoff's* open "restructure into multiple files or keep one file". *Why:* the file reached ~140 KB, past the ~120 KB point #9 set for revisiting, and the Profile screen (#44) is the first second screen. A framework or bundler was not chosen.
 - **GitHub Issues are the single source of truth for open work.** Every feature request, bug, follow-up and unverified check lives in an issue; this file and PR descriptions link to them instead of holding them. Untracked items from PR notes and this file became #45–#51, Vishal's new requests became #42–#44, and the device checks for #27 and #37–#41 were added to #5. *Why:* open items were scattered across PR "not verified" sections and this log, and several closed issues still had unchecked device tests.
 
 ## 2026-11-16
