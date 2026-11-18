@@ -4,6 +4,13 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-18
 
+- **Committed headless tests for the tuner, hold exercise and call and response** ([#23](https://github.com/vishmatta/shadja/issues/23)).
+  - `tests/` holds them, outside the app: the site loads nothing from it and there is still no build step. `cd tests && npm test` runs 26 tests in about 2 minutes; `tests/README.md` covers first-time setup (`npm ci`, `npx playwright install chromium`) and CI.
+  - Voices are synthesised from a seed (`tests/voices.mjs`), not recorded, so every run hears the same audio and no audio files are committed. Chromium's fake mic plays them (`--use-file-for-fake-audio-capture`), and the tests check what is on screen.
+  - **Drone bleed** is the app's real output fed back into the mic 60 ms late at half level, the same method #25 used; the test also checks the measured leak, so it can't pass on silence.
+  - `checkPhrase` is lifted from `index.html` by its source text and unit-tested in Node, which relies on it staying pure.
+  - `SHADJA_SITE=<dir>` runs the suite against another copy of the app. Deliberately broken copies (old minimum hold, no 3-frame rule, own-sound gate off, looser steadiness, no legato sharing in `checkPhrase`) each fail the matching test.
+  - Playwright is pinned (1.63.0) with its lockfile committed. Running the tests in CI is [#56](https://github.com/vishmatta/shadja/issues/56); tests for the rest of the app are [#63](https://github.com/vishmatta/shadja/issues/63), which the module split (#61) depends on.
 - **Branch names: a platform-assigned branch is fine; the PR title carries the issue number.** Cloud sessions are given `claude/…` branch names and told to push only there, which clashed with the `<issue>-<slug>` rule. The PR title now starts with the issue number (e.g. "#23: …"), so the link stays visible either way.
 - **Build and review loop, PR sizes, and agents post as themselves** (AGENTS.md, [#53](https://github.com/vishmatta/shadja/issues/53), [#55](https://github.com/vishmatta/shadja/issues/55)).
   - One issue, one branch, one PR. A builder agent builds and answers findings with new commits; a separate reviewer agent reviews, re-reviews only new commits, and marks findings blocking or non-blocking. At most 3 rounds, then the repo admin decides.
