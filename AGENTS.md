@@ -64,6 +64,8 @@ One issue, one branch, one PR, two roles: builder and reviewer. **Only a repo ad
 | **M** | A feature or fix inside one area; raga data and raga text; new saved settings; anything else not S or L. | Reviewer approval, checks green, and **repo admin approval**. |
 | **L** | Audio and DSP (`tone`, drone, tanpura, the scheduler, `outBus`); the tuner (`detectPitch`, the gates, `TN`); the saved-settings format; service worker and offline; `.github/`, rulesets, workflows, secrets; AGENTS.md rules; the module split (#9); changes across several areas or over ~300 lines. | Same as M, plus: the repo admin approves the plan on the issue before building, and device checks are listed in #5 before merge. |
 
+Raga data and raga text are always at least M, because they are what a beginner learns from. Once a week, the repo admin looks over the S PRs that merged without them.
+
 **Until #55 makes GitHub enforce sizes, treat every PR as at least M: only the repo admin merges.**
 
 **Builder** (plans and builds; may use subagents):
