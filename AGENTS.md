@@ -2,6 +2,8 @@
 
 Rules and context for AI coding agents working in this repo. Keep this file under ~20 KB (Antigravity truncates rule files over 24,000 bytes). Project history and decisions: `docs/HANDOFF.md` (the original handoff; frozen, never edit it) and `docs/DECISIONS.md` (living log of changes since; it wins where the two disagree, so add an entry there for each decision or merged PR).
 
+**Backlog: GitHub Issues are the single source of truth** for feature requests, bugs, follow-ups and anything "not verified" or "still to confirm". Docs and PR descriptions record what was decided and shipped; they never hold open work on their own. When a PR leaves something undone, different from its issue, or unverified, open an issue for it (or add it to an existing one, such as the device checklist in #5) and link it from the PR and the DECISIONS.md entry. Close an issue only when its Done-when list is met or its open checks have moved to another issue.
+
 ## What this is
 Shadja is a personal web app for learning Hindustani classical ragas by ear and by singing, with a Western scales mode kept behind a toggle. The only user is Vishal, an absolute beginner who practises by singing.
 
