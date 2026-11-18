@@ -4,6 +4,7 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-18
 
+- **Branch names: a platform-assigned branch is fine; the PR title carries the issue number.** Cloud sessions are given `claude/…` branch names and told to push only there, which clashed with the `<issue>-<slug>` rule. The PR title now starts with the issue number (e.g. "#23: …"), so the link stays visible either way.
 - **Build and review loop, PR sizes, and agents post as themselves** (AGENTS.md, [#53](https://github.com/vishmatta/shadja/issues/53), [#55](https://github.com/vishmatta/shadja/issues/55)).
   - One issue, one branch, one PR. A builder agent builds and answers findings with new commits; a separate reviewer agent reviews, re-reviews only new commits, and marks findings blocking or non-blocking. At most 3 rounds, then the repo admin decides.
   - **Size decides the approvals.** S (docs, wording, small fixes outside risky areas): reviewer approval and green checks, auto-merge allowed. M (a feature or fix in one area, raga data): plus repo admin approval. L (audio, tuner, storage format, workflows, AGENTS.md rules, big or cross-area changes): plus admin sign-off on the plan before building. The size is computed from the diff, not just claimed; enforcing it is #55. Until then every PR is at least M.

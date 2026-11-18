@@ -69,7 +69,7 @@ Raga data and raga text are always at least M, because they are what a beginner 
 **Until #55 makes GitHub enforce sizes, treat every PR as at least M: only the repo admin merges.**
 
 **Builder** (plans and builds; may use subagents):
-1. Branch `<issue>-<slug>` from `main` (e.g. `43-hold-records`). Subagents work in the builder's checkout and never push or open branches; the builder commits.
+1. Branch from the latest `main`. Use `<issue>-<slug>` (e.g. `43-hold-records`), unless your platform assigns a branch name (cloud sessions get `claude/…`): then use the assigned one. Either way, start the PR title with the issue number (e.g. "#43: Hold records"). Subagents work in the builder's checkout and never push or open branches; the builder commits.
 2. Open a draft PR with "Closes #N", the size, a Verified section and a Not verified section. File anything unverified or left undone as an issue (see Backlog above).
 3. Watch the PR. For each finding, push a fix as a new commit (never force-push, so the reviewer can diff since its last review) and reply "Fixed in `<sha>`" or "Not changing, because …".
 4. Mark the PR ready only when the reviewer has posted "No blocking findings". Turn on auto-merge only for S, and only once the gate in #55 exists.
