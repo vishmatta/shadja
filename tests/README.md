@@ -24,9 +24,10 @@ npm test
 On Linux CI images, use `npx playwright install --with-deps chromium` instead. It also installs the system libraries Chromium needs.
 
 ## In CI (GitHub Actions, #56)
-A job needs the same three steps:
+A job checks out the repo, sets up Node, then runs the same three steps:
 
 ```yaml
+- uses: actions/checkout@v4
 - uses: actions/setup-node@v4
   with: { node-version: 22 }
 - run: npm ci
@@ -36,6 +37,8 @@ A job needs the same three steps:
 - run: npm test
   working-directory: tests
 ```
+
+The tags above (`@v4`) are for reading only. #56 pins each action to a full commit SHA (with the tag in a comment, e.g. `actions/checkout@<sha> # v4`) and gives the job a read-only `GITHUB_TOKEN`; copy that, not this snippet.
 
 Python 3 is already on GitHub's Ubuntu runners.
 
