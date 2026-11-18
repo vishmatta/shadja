@@ -51,6 +51,37 @@ There is no test suite yet. Before saying a change works:
 
 Say what you verified and what you didn't: audio quality on Vishal's phone can only be confirmed by Vishal.
 
+## Build and review loop
+One issue, one branch, one PR, two roles: builder and reviewer. **Only a repo admin merges to `main` by hand.** No agent clicks merge, approves on an admin's behalf or bypasses the ruleset. The one exception is an S-size PR, which may merge through GitHub auto-merge once the enforced gate passes.
+
+**Identity: agents post as themselves, never through an admin's account.** Each agent uses its own GitHub identity (`claude[bot]`, `chatgpt-codex-connector[bot]`, or a GitHub App per agent such as `antigravity-…[bot]` or `hermes-…[bot]`). Setup is tracked in #53. Commits carry the agent's own name and email as the author. Until an agent has its own identity, it may push its branch and open a draft PR (naming itself, e.g. "Builder: Claude", at the top of the body), but it posts **no** reviews, comments or replies through the admin's account. Its feedback goes to the admin in chat instead.
+
+**Size decides the approvals.** The builder proposes a `size:` label on the issue before building, and the reviewer confirms it. When in doubt, size up. Any one L trait makes the PR L.
+
+| Size | What it covers | Needs before merge |
+|---|---|---|
+| **S** | Docs (not AGENTS.md), README, code comments; UI wording and help text; CSS that doesn't change layout or breakpoints; a bug fix of a few lines in one function, outside the L areas. Nothing a beginner learns from changes. | Reviewer approval, all checks green. Auto-merge allowed. |
+| **M** | A feature or fix inside one area; raga data and raga text; new saved settings; anything else not S or L. | Reviewer approval, checks green, and **repo admin approval**. |
+| **L** | Audio and DSP (`tone`, drone, tanpura, the scheduler, `outBus`); the tuner (`detectPitch`, the gates, `TN`); the saved-settings format; service worker and offline; `.github/`, rulesets, workflows, secrets; AGENTS.md rules; the module split (#9); changes across several areas or over ~300 lines. | Same as M, plus: the repo admin approves the plan on the issue before building, and device checks are listed in #5 before merge. |
+
+Raga data and raga text are always at least M, because they are what a beginner learns from. Once a week, the repo admin looks over the S PRs that merged without them.
+
+**Until #55 makes GitHub enforce sizes, treat every PR as at least M: only the repo admin merges.**
+
+**Builder** (plans and builds; may use subagents):
+1. Branch `<issue>-<slug>` from `main` (e.g. `43-hold-records`). Subagents work in the builder's checkout and never push or open branches; the builder commits.
+2. Open a draft PR with "Closes #N", the size, a Verified section and a Not verified section. File anything unverified or left undone as an issue (see Backlog above).
+3. Watch the PR. For each finding, push a fix as a new commit (never force-push, so the reviewer can diff since its last review) and reply "Fixed in `<sha>`" or "Not changing, because …".
+4. Mark the PR ready only when the reviewer has posted "No blocking findings". Turn on auto-merge only for S, and only once the gate in #55 exists.
+
+**Reviewer** (a separate session that doesn't share the builder's context; never pushes):
+1. Check the size first; if the diff is bigger than its label, say so as a blocking finding. Then review against the issue's Done-when list, the Hard constraints, Audio rules and Testing above. Run the checks yourself rather than trusting the PR text.
+2. Post one review with numbered findings, each marked **blocking** or **non-blocking**, with file and line. Use Request changes for blocking findings and Comment otherwise.
+3. On new commits, re-review only what changed since your last review, and close or re-raise each finding.
+4. End with Approve and "No blocking findings" when done. For M and L, approval doesn't merge; the repo admin does.
+
+**Stop rule:** at most 3 review rounds. If a finding is still disputed after round 3, the builder summarises both positions for the repo admin in the PR and stops. Neither agent can check audio by ear or on the real iPhone; those go to #5.
+
 ## Working with Vishal
 - Put the answer or result first. Be direct and dense, use short paragraphs, and bold only the anchor phrase.
 - Offer at most 3 options and recommend one. State assumptions in one line. Ask at most one question.
