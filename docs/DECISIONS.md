@@ -4,6 +4,7 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-18
 
+- **The ~300-line L threshold counts app code only** ([#55](https://github.com/vishmatta/shadja/issues/55)). Lines under `tests/` and `docs/` don't count toward it, because they can't break the app; every other L trait still applies (e.g. `.github/` and AGENTS.md rules are L at any size). *Why:* PR #64 added 661 lines of tests with no app change, and the line rule alone made it L. Decided by Vishal.
 - **Committed headless tests for the tuner, hold exercise and call and response** ([#23](https://github.com/vishmatta/shadja/issues/23)).
   - `tests/` holds them, outside the app: the site loads nothing from it and there is still no build step. `cd tests && npm test` runs 26 tests in about 2 minutes; `tests/README.md` covers first-time setup (`npm ci`, `npx playwright install chromium`) and CI.
   - Voices are synthesised from a seed (`tests/voices.mjs`), not recorded, so every run hears the same audio and no audio files are committed. Chromium's fake mic plays them (`--use-file-for-fake-audio-capture`), and the tests check what is on screen.
