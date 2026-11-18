@@ -4,10 +4,12 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-18
 
-- **Build and review loop, and agents post as themselves** (AGENTS.md, [#53](https://github.com/vishmatta/shadja/issues/53)).
-  - One issue, one branch, one PR. A builder agent builds and answers findings with new commits; a separate reviewer agent reviews, re-reviews only new commits, and marks findings blocking or non-blocking. At most 3 rounds, then Vishal decides. Only Vishal merges.
-  - Agents use their own GitHub identities (`claude[bot]`, `chatgpt-codex-connector[bot]`, or a GitHub App per agent), never Vishal's account. Until an agent has one, it may push and open a draft PR but posts no reviews or comments; setup is #53.
-  - *Why:* Vishal wants to see which agent wrote what, and GitHub doesn't let an account review its own PR, so a reviewer posting as Vishal could only comment.
+- **Build and review loop, PR sizes, and agents post as themselves** (AGENTS.md, [#53](https://github.com/vishmatta/shadja/issues/53), [#55](https://github.com/vishmatta/shadja/issues/55)).
+  - One issue, one branch, one PR. A builder agent builds and answers findings with new commits; a separate reviewer agent reviews, re-reviews only new commits, and marks findings blocking or non-blocking. At most 3 rounds, then the repo admin decides.
+  - **Size decides the approvals.** S (docs, wording, small fixes outside risky areas): reviewer approval and green checks, auto-merge allowed. M (a feature or fix in one area, raga data): plus repo admin approval. L (audio, tuner, storage format, workflows, AGENTS.md rules, big or cross-area changes): plus admin sign-off on the plan before building. The size is computed from the diff, not just claimed; enforcing it is #55. Until then every PR is at least M.
+  - **Only a repo admin merges to `main` by hand;** S PRs may merge through auto-merge once the gate exists. Agents never merge, approve for the admin or bypass the ruleset.
+  - Agents use their own GitHub identities (`claude[bot]`, `chatgpt-codex-connector[bot]`, or a GitHub App per agent), never the admin's account. Until an agent has one, it may push and open a draft PR but posts no reviews or comments; setup is #53.
+  - *Why:* Vishal wants to see which agent wrote what, and wants low-risk work to flow without him while keeping a say on changes that can break the app. GitHub doesn't let an account review its own PR, so a reviewer posting as Vishal could only comment.
 - **Code structure: split `index.html` into native ES modules, with no build step** ([#9](https://github.com/vishmatta/shadja/issues/9)).
   - `index.html`, `style.css` and a `js/` folder of modules, one per existing script section. GitHub Pages serves them as is.
   - Type checks (`// @ts-check`) and the committed tests from #23 run only in GitHub Actions; nothing the site loads is built.
