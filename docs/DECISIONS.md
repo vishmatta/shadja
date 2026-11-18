@@ -4,6 +4,7 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 ## 2026-11-18
 
+- **The ~300-line L threshold counts app code only** ([#55](https://github.com/vishmatta/shadja/issues/55)). Lines under `tests/` and `docs/` don't count toward it, because they can't break the app; every other L trait still applies (e.g. `.github/` and AGENTS.md rules are L at any size). *Why:* PR #64 added 661 lines of tests with no app change, and the line rule alone made it L. Decided by Vishal.
 - **Branch names: a platform-assigned branch is fine; the PR title carries the issue number.** Cloud sessions are given `claude/…` branch names and told to push only there, which clashed with the `<issue>-<slug>` rule. The PR title now starts with the issue number (e.g. "#23: …"), so the link stays visible either way.
 - **Build and review loop, PR sizes, and agents post as themselves** (AGENTS.md, [#53](https://github.com/vishmatta/shadja/issues/53), [#55](https://github.com/vishmatta/shadja/issues/55)).
   - One issue, one branch, one PR. A builder agent builds and answers findings with new commits; a separate reviewer agent reviews, re-reviews only new commits, and marks findings blocking or non-blocking. At most 3 rounds, then the repo admin decides.
