@@ -55,6 +55,7 @@ Then open http://localhost:8000.
 - [`AGENTS.md`](AGENTS.md): rules, code map, audio lessons and how to test. Read this first.
 - [`docs/HANDOFF.md`](docs/HANDOFF.md): the original project handoff, kept frozen as a snapshot.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md): what has changed since the handoff (living log).
+- [`tests/`](tests/README.md): headless tests for the tuner, hold exercise and call and response. Run `cd tests && npm test`.
 - [Issues](https://github.com/vishmatta/shadja/issues): planned work, labelled `priority: high`, `priority: medium` or `priority: low`.
 
 ## Licence

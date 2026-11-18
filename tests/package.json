@@ -1,0 +1,13 @@
+{
+  "name": "shadja-tests",
+  "private": true,
+  "description": "Headless tests for Shadja. Not loaded by the site.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 *.test.mjs",
+    "voices": "node voices.mjs .out"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
