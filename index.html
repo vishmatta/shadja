@@ -1796,7 +1796,9 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
         var a = s[i], b = s[i + 1], p = i > 0 ? s[i - 1] : null;
         if (a === null || b === null || a === b) continue;
         if (pc(a) !== f || pc(b) !== pc(to) || (b > a) !== up) continue;
-        if (p === null || prev === undefined || pc(prev) === pc(p)) return true;
+        // The earlier note must match the recorded one in name and in direction (Pa Ma♯ Pa comes down into Ma♯;
+        // a leap up from lower Pa to Ma♯ is not that turn).
+        if (p === null || prev === undefined || (pc(prev) === pc(p) && (prev > from) === (p > a))) return true;
       }
       return false;
     });

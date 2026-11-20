@@ -25,6 +25,7 @@ test('Bihag: its own Pa Ma♯ Pa turn is allowed; Ma♯ is never used going stra
   assert.equal(ok('Bihag', Mat, Pa), true, 'Ma♯ → Pa with no note before it');
   assert.equal(ok('Bihag', Mat, Pa, Ga), false, 'Ga Ma♯ → Pa (#75 review, finding 1)');
   assert.equal(ok('Bihag', Mat, Pa, Ma), false, 'Ma Ma♯ → Pa (#75 review, finding 1)');
+  assert.equal(ok('Bihag', Mat, Pa, -5), false, 'lower Pa leaping up to Ma♯ → Pa is not the turn (#75 review, finding 6)');
   assert.equal(ok('Bihag', Mat, Dha, Pa), false, 'Pa Ma♯ → Dha');
 });
 
