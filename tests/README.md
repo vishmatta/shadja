@@ -56,6 +56,7 @@ Python 3 is already on GitHub's Ubuntu runners.
 | `hold.test.mjs` | The hold exercise: steady, 40¢ flat in Live mode, wobbly (#29) |
 | `echo.test.mjs` | `checkPhrase` unit cases, and one phrase sung back into the mic (#18) |
 | `raga-rules.test.mjs` | Every raga in `RAGAS` against the raga grammar (#66): 5 to 7 notes, Sa, Ma or Pa, no altered note next to its natural, vadi/samvadi/rest/pakad use raga notes, notes fit the thaat. Vadi–samvadi not a 4th or 5th is a warning only. Pure data, no browser (the loader is in `source.mjs`): runs alone in under a second with `node --test raga-rules.test.mjs`. Allow-lists at the top of the file give the reason for each exception. |
+| `thaats.test.mjs` | The 10 thaats (#69): the `THAATS` table (each one note from the one it names), the notes each thaat’s Play button schedules, every raga’s "Parent scale" line, layout at 380 px in light and dark (screenshots go to `tests/.out/`), and Western mode unchanged. The reference table is `thaat-table.mjs`. |
 | `move-rule.test.mjs` | Strict mode's move rule (#74): `moveOk` unit cases (a ↓ note may be reached from below but must be left going down; a raga's own vakra moves are allowed; every move in each raga's aroha, avaroha and pakad passes), plus one browser check of the tap path in Yaman. |
 | `explainer.test.mjs` | The "What makes a raga?" panel (#71): hidden in Western mode, eight lines with named link buttons, each link opens, scrolls to and focuses its target, fits a 380×763 screen with no sideways scroll, text contrast at least 4.5:1 in light and dark. |
 
