@@ -6,7 +6,7 @@ A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HAND
 
 - **A test checks every raga against the raga grammar** ([#66](https://github.com/vishmatta/shadja/issues/66)). `tests/raga-rules.test.mjs` lifts `RAGAS` out of `index.html` and checks 8 rules: 5 to 7 notes, Sa present, Ma or Pa present, no natural and altered form of one note back to back, vadi/samvadi/rest are raga notes, notes fit the thaat (a `THAATS` table of the 10 thaats lives in the test), vadi and samvadi a 4th or 5th apart (warning only), pakad uses raga notes. All 12 current ragas pass; no data changed.
   - **Notes are counted as swaras, not pitch classes** (rule 1): Ma and Ma♯ in one raga count as one note, as in jati counting. *Why:* by pitch class, Bihag (both Ma) and Khamaj (both Ni) have 8 notes and would fail, though both are Sampurna (7).
-  - **Thaat allow-list:** Bihag's passing Ma♯ (Bilawal thaat) and Khamaj's shuddha Ni in aroha (Khamaj thaat has only Ni♭). Each has its reason in the file; #7's source check should confirm both.
+  - **Thaat allow-list:** Bihag's passing Ma♯ (Bilawal thaat) and Khamaj's shuddha Ni in aroha (Khamaj thaat has only Ni♭). Each has its reason in the file. **Open:** confirming swara counting and both exceptions against a primary source is tracked on [#7](https://github.com/vishmatta/shadja/issues/7).
 
 ## 2026-11-18
 
