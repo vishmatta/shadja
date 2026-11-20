@@ -1818,7 +1818,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
           [r.aroha, r.avaroha, r.pakad].forEach(function (s) {
             for (var j = 1; j + 1 < s.length; j++) {
               var a = s[j - 1], b = s[j], c = s[j + 1];
-              if (a === null || c === null || pcOf(b) !== pcOf(last.i) || (c > b) !== up || b === c) continue;
+              if (a === null || b === null || c === null || pcOf(b) !== pcOf(last.i) || (c > b) !== up || b === c) continue;
               var t = [a, b, c].map(function (n) { return SARGAM[pcOf(n)]; }).join(' ');
               if (turns.indexOf(t) < 0) turns.push(t);
             }
