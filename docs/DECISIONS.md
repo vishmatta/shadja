@@ -2,6 +2,12 @@
 
 A living log of what changed after [`HANDOFF.md`](HANDOFF.md) (2026-11-08). HANDOFF.md stays frozen as a snapshot. Where an entry here contradicts it, **this file wins**. Newest first. Each entry links to its pull request or issue.
 
+## 2026-11-20
+
+- **A test checks every raga against the raga grammar** ([#66](https://github.com/vishmatta/shadja/issues/66)). `tests/raga-rules.test.mjs` lifts `RAGAS` out of `index.html` and checks 8 rules: 5 to 7 notes, Sa present, Ma or Pa present, no natural and altered form of one note back to back, vadi/samvadi/rest are raga notes, notes fit the thaat (a `THAATS` table of the 10 thaats lives in the test), vadi and samvadi a 4th or 5th apart (warning only), pakad uses raga notes. All 12 current ragas pass; no data changed.
+  - **Notes are counted as swaras, not pitch classes** (rule 1): Ma and Ma♯ in one raga count as one note, as in jati counting. *Why:* by pitch class, Bihag (both Ma) and Khamaj (both Ni) have 8 notes and would fail, though both are Sampurna (7).
+  - **Thaat allow-list:** Bihag's passing Ma♯ (Bilawal thaat) and Khamaj's shuddha Ni in aroha (Khamaj thaat has only Ni♭). Each has its reason in the file. **Open:** confirming swara counting and both exceptions against a primary source is tracked on [#7](https://github.com/vishmatta/shadja/issues/7).
+
 ## 2026-11-18
 
 - **The ~300-line L threshold counts app code only** ([#55](https://github.com/vishmatta/shadja/issues/55)). Lines under `tests/` and `docs/` don't count toward it, because they can't break the app; every other L trait still applies (e.g. `.github/` and AGENTS.md rules are L at any size). *Why:* PR #64 added 661 lines of tests with no app change, and the line rule alone made it L. Decided by Vishal.
