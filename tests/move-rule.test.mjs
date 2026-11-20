@@ -9,7 +9,7 @@ const RAGAS = loadRagas();
 const moveOk = loadFunction('moveOk');
 // Sargam offsets from Sa (lower octave negative, upper Sa 12).
 const Sa = 0, re = 1, Re = 2, ga = 3, Ga = 4, Ma = 5, Mat = 6, Pa = 7, dha = 8, Dha = 9, ni = 10, Ni = 11, SA = 12;
-const ok = (raga, from, to) => moveOk(RAGAS[raga], from, to);
+const ok = (raga, from, to, prev) => moveOk(RAGAS[raga], from, to, prev);
 
 test('Yaman: Pa may be reached from below, but the next note must be lower', () => {
   assert.equal(ok('Yaman', Mat, Pa), true, 'Ma♯ → Pa');
@@ -19,15 +19,19 @@ test('Yaman: Pa may be reached from below, but the next note must be lower', () 
   assert.equal(ok('Yaman', Pa, Ni), false, 'Pa → Ni');
 });
 
-test('Bihag: its own Pa Ma♯ Pa turn is allowed; Ma♯ never goes on up past Pa', () => {
+test('Bihag: its own Pa Ma♯ Pa turn is allowed; Ma♯ is never used going straight up', () => {
   assert.equal(ok('Bihag', Pa, Mat), true, 'Pa → Ma♯');
-  assert.equal(ok('Bihag', Mat, Pa), true, 'Ma♯ → Pa');
-  assert.equal(ok('Bihag', Mat, Dha), false, 'Ma♯ → Dha');
+  assert.equal(ok('Bihag', Mat, Pa, Pa), true, 'Pa Ma♯ → Pa (its own turn)');
+  assert.equal(ok('Bihag', Mat, Pa), true, 'Ma♯ → Pa with no note before it');
+  assert.equal(ok('Bihag', Mat, Pa, Ga), false, 'Ga Ma♯ → Pa (#75 review, finding 1)');
+  assert.equal(ok('Bihag', Mat, Pa, Ma), false, 'Ma Ma♯ → Pa (#75 review, finding 1)');
+  assert.equal(ok('Bihag', Mat, Dha, Pa), false, 'Pa Ma♯ → Dha');
 });
 
-test('Bageshree: the avaroha’s Ma Pa Dha is allowed', () => {
+test('Bageshree: the avaroha’s Ma Pa Dha is allowed, but not Pa going straight up from Ga♭', () => {
   assert.equal(ok('Bageshree', Ma, Pa), true, 'Ma → Pa');
-  assert.equal(ok('Bageshree', Pa, Dha), true, 'Pa → Dha');
+  assert.equal(ok('Bageshree', Pa, Dha, Ma), true, 'Ma Pa → Dha (its own turn)');
+  assert.equal(ok('Bageshree', Pa, Dha, ga), false, 'Ga♭ Pa → Dha (#75 review, finding 1)');
 });
 
 test('Bhimpalasi: Re may be touched from Sa, but not used going up', () => {
@@ -49,12 +53,13 @@ test('a breath in the pakad does not make a move', () => {
   assert.equal(moveOk({ ...r, pakad: [Pa, Dha] }, Pa, Dha), true, 'Pa → Dha with no breath is');
 });
 
-test('every move between consecutive aroha, avaroha and pakad notes is allowed', () => {
+test('every move in each raga’s aroha, avaroha and pakad is allowed, with the note before it', () => {
   for (const [name, r] of Object.entries(RAGAS)) {
     const segs = [r.aroha, r.avaroha, r.pakad];
     for (const s of segs) for (let i = 0; i + 1 < s.length; i++) {
       if (s[i] === null || s[i + 1] === null) continue;
-      assert.equal(moveOk(r, s[i], s[i + 1]), true, `${name}: ${s[i]} → ${s[i + 1]}`);
+      const prev = i > 0 && s[i - 1] !== null ? s[i - 1] : undefined;
+      assert.equal(moveOk(r, s[i], s[i + 1], prev), true, `${name}: ${prev} ${s[i]} → ${s[i + 1]}`);
     }
   }
 });
@@ -75,6 +80,21 @@ test('browser, Yaman strict: Ma♯ then Pa plays; Pa then Dha is blocked with th
     const st = await page.$eval('#status', (e) => ({ bad: e.classList.contains('bad'), text: e.textContent }));
     assert.equal(st.bad, true, 'Pa → Dha blocked');
     assert.match(st.text, /^After Pa .*Yaman goes down: Pa isn’t used going up\.$/);
+    assert.deepEqual(app.errors, []);
+  } finally { await app.close(); }
+});
+
+test('browser, Bihag strict: Pa Ma♯ Pa plays; Ga Ma♯ Pa is blocked at Pa', async () => {
+  const app = await openApp(server, null);
+  try {
+    const { page } = app;
+    await page.selectOption('#scale', 'Bihag');
+    const tap = (i) => page.click(`.key[data-i="${i}"]`);
+    const bad = () => page.$eval('#status', (e) => e.classList.contains('bad'));
+    await tap(Pa); await tap(Mat); await tap(Pa);
+    assert.equal(await bad(), false, 'Pa Ma♯ Pa not blocked');
+    await tap(Ga); await tap(Mat); await tap(Pa);
+    assert.equal(await bad(), true, 'Ga Ma♯ Pa blocked');
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
