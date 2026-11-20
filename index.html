@@ -1779,21 +1779,59 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     if (bad) statusTimer = setTimeout(function () { setStatus(defaultStatus(), false); }, 2500);
   }
 
+  // moveOk(r, from, to): pure, no DOM or state. May a melody move from note `from` to note `to` (semitone offsets
+  // from Sa) in raga r? The rule judges the note you LEAVE, not the note you reach (#74): a note used only coming
+  // down (↓, e.g. Pa in Yaman) may be reached from below, but the next note must be lower; a ↑ note likewise must
+  // be followed by a higher one. A turn the aroha, avaroha or pakad itself makes is also allowed, but only as that
+  // whole turn: `prev` is the note before `from` (undefined if unknown), and it must match the note before the
+  // recorded move. So Bihag's Ma♯ → Pa is allowed after Pa (Pa Ma♯ Pa), not after Ga (Ga Ma♯ Pa would use Ma♯
+  // going up); Bageshree's Pa → Dha only after Ma (Ma Pa Dha). A breath (null) in the pakad separates notes.
+  function moveOk(r, from, to, prev) {
+    if (from === to) return true;
+    var pc = function (n) { return ((n % 12) + 12) % 12; };
+    var f = pc(from), up = to > from;
+    if ((up ? r.aroha : r.avaroha).some(function (n) { return n !== null && pc(n) === f; })) return true;
+    return [r.aroha, r.avaroha, r.pakad].some(function (s) {
+      for (var i = 0; i + 1 < s.length; i++) {
+        var a = s[i], b = s[i + 1], p = i > 0 ? s[i - 1] : null;
+        if (a === null || b === null || a === b) continue;
+        if (pc(a) !== f || pc(b) !== pc(to) || (b > a) !== up) continue;
+        // The earlier note must match the recorded one in name and in direction (Pa Ma♯ Pa comes down into Ma♯;
+        // a leap up from lower Pa to Ma♯ is not that turn).
+        if (p === null || prev === undefined || (pc(prev) === pc(p) && (prev > from) === (p > a))) return true;
+      }
+      return false;
+    });
+  }
+
   // The one rule path for a played note, shared by the on-screen keys and the MIDI keyboard.
   // Returns true when the note may sound; otherwise it has already shown why (status, bad flash).
   function tapAllowed(k, inScale, ghost) {
     if (ghost || (lockOn() && !inScale)) return false;
     if (isRaga() && state.strict && inScale) {
-      var now = Date.now(), last = state.lastTap;
-      if (last && now - last.t < 4000 && last.i !== k.i) {
-        var info = ragaInfo(state.scale), rel = pcOf(k.i), up = k.i > last.i;
-        if (!(up ? info.aro[rel] : info.ava[rel])) {
-          setStatus(SARGAM[rel] + ' (' + (rel + state.base) + ') isn’t used going ' + (up ? 'up' : 'down') + ' in ' + state.scale + '.', true);
+      var now = Date.now(), last = state.lastTap, recent = last && now - last.t < 4000;
+      if (recent && last.i !== k.i) {
+        if (!moveOk(RAGAS[state.scale], last.i, k.i, last.prev)) {
+          var r = RAGAS[state.scale], from = SARGAM[pcOf(last.i)], up = k.i > last.i, turns = [];
+          // Name the raga's own turns out of this note in this direction (Bihag: Pa Ma♯ Pa), so the message
+          // doesn't seem to contradict a move that is allowed.
+          [r.aroha, r.avaroha, r.pakad].forEach(function (s) {
+            for (var j = 1; j + 1 < s.length; j++) {
+              var a = s[j - 1], b = s[j], c = s[j + 1];
+              if (a === null || b === null || c === null || pcOf(b) !== pcOf(last.i) || (c > b) !== up || b === c) continue;
+              var t = [a, b, c].map(function (n) { return SARGAM[pcOf(n)]; }).join(' ');
+              if (turns.indexOf(t) < 0) turns.push(t);
+            }
+          });
+          setStatus('After ' + from + ' (' + (pcOf(last.i) + state.base) + '), ' + state.scale + ' goes ' + (up ? 'down' : 'up') +
+            ': ' + from + ' isn’t used going ' + (up ? 'up' : 'down') +
+            (turns.length ? ', except in the turn ' + turns.join(' or ') : '') + '.', true);
           markBad(k.i);
           return false;
         }
       }
-      state.lastTap = { i: k.i, t: now };
+      // prev: the different note played before this one, so a raga's own turn (Pa Ma♯ Pa) can be recognised.
+      state.lastTap = { i: k.i, t: now, prev: !recent ? undefined : last.i !== k.i ? last.i : last.prev };
       if (statusBad) setStatus(defaultStatus(), false);
     }
     return true;
@@ -2174,8 +2212,8 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     $('stepRow').hidden = locked;
     $('numbers').classList.toggle('split', raga);
     $('stripHint').textContent = !raga ? 'Tap a cell to turn a note on or off.'
-      : locked ? 'Full raga is on. ↑ only going up, ↓ only going down. Turn on Practice subset to drop notes.'
-      : 'Tap a cell to turn a note on or off. ↑ only going up, ↓ only going down.';
+      : locked ? 'Full raga is on. After a ↑ note go higher; after a ↓ note go lower. Turn on Practice subset to drop notes.'
+      : 'Tap a cell to turn a note on or off. After a ↑ note go higher; after a ↓ note go lower.';
     $('oVal').textContent = state.octave;
     $('oDn').disabled = state.octave <= 1;
     $('oUp').disabled = state.octave >= 6;
