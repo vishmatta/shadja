@@ -44,3 +44,22 @@ export function loadFunction(name) {
   }
   return new Function('return ' + src.slice(start, i + 1))();
 }
+
+// Lifts several top-level functions, plus the SARGAM note names, into one scope, so pure functions that call each
+// other (checkPhrase → phraseRules → moveOk, moveWhy) run together in Node (#68). Returns { name: fn }.
+export function loadFunctions(names) {
+  const src = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8');
+  const sargam = src.match(/var SARGAM = \[[^\]]*\];/);
+  assert.ok(sargam, 'var SARGAM not found in index.html');
+  const parts = names.map((name) => {
+    const start = src.indexOf('function ' + name + '(');
+    assert.ok(start > -1, name + ' not found in index.html');
+    let depth = 0, i = src.indexOf('{', start);
+    for (; i < src.length; i++) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}' && --depth === 0) break;
+    }
+    return src.slice(start, i + 1);
+  });
+  return new Function(sargam[0] + '\n' + parts.join('\n') + '\nreturn { ' + names.join(', ') + ' };')();
+}
