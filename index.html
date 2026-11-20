@@ -1810,9 +1810,20 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       var now = Date.now(), last = state.lastTap, recent = last && now - last.t < 4000;
       if (recent && last.i !== k.i) {
         if (!moveOk(RAGAS[state.scale], last.i, k.i, last.prev)) {
-          var from = SARGAM[pcOf(last.i)], up = k.i > last.i;
+          var r = RAGAS[state.scale], from = SARGAM[pcOf(last.i)], up = k.i > last.i, turns = [];
+          // Name the raga's own turns out of this note in this direction (Bihag: Pa Ma♯ Pa), so the message
+          // doesn't seem to contradict a move that is allowed.
+          [r.aroha, r.avaroha, r.pakad].forEach(function (s) {
+            for (var j = 1; j + 1 < s.length; j++) {
+              var a = s[j - 1], b = s[j], c = s[j + 1];
+              if (a === null || c === null || pcOf(b) !== pcOf(last.i) || (c > b) !== up || b === c) continue;
+              var t = [a, b, c].map(function (n) { return SARGAM[pcOf(n)]; }).join(' ');
+              if (turns.indexOf(t) < 0) turns.push(t);
+            }
+          });
           setStatus('After ' + from + ' (' + (pcOf(last.i) + state.base) + '), ' + state.scale + ' goes ' + (up ? 'down' : 'up') +
-            ': ' + from + ' isn’t used going ' + (up ? 'up' : 'down') + '.', true);
+            ': ' + from + ' isn’t used going ' + (up ? 'up' : 'down') +
+            (turns.length ? ', except in the turn ' + turns.join(' or ') : '') + '.', true);
           markBad(k.i);
           return false;
         }

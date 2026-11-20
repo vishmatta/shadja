@@ -96,6 +96,8 @@ test('browser, Bihag strict: Pa Ma♯ Pa plays; Ga Ma♯ Pa is blocked at Pa', a
     assert.equal(await bad(), false, 'Pa Ma♯ Pa not blocked');
     await tap(Ga); await tap(Mat); await tap(Pa);
     assert.equal(await bad(), true, 'Ga Ma♯ Pa blocked');
+    assert.match(await page.$eval('#status', (e) => e.textContent),
+      /^After Ma♯ .*Bihag goes down: Ma♯ isn’t used going up, except in the turn Pa Ma♯ Pa\.$/);
     assert.deepEqual(app.errors, []);
   } finally { await app.close(); }
 });
