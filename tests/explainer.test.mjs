@@ -88,6 +88,20 @@ test('expanded, it fits one 380×763 screen with no sideways scroll', async () =
   } finally { await page.close(); }
 });
 
+test('desktop 1440×790: the stage stays pinned on screen while Raga rules is read', async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 790 } });
+  try {
+    await page.goto(server.url + 'index.html');
+    assert.equal(await page.$eval('#ragaPanel', (d) => d.open), true);   // open by default on a wide screen
+    const top = await page.evaluate(async () => {
+      document.getElementById('ragaPanel').scrollIntoView({ block: 'start' });
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return document.getElementById('stage').getBoundingClientRect().top;
+    });
+    assert.ok(top >= 0 && top <= 40, 'stage top is ' + top + ' px');
+  } finally { await page.close(); }
+});
+
 for (const scheme of ['light', 'dark']) {
   test('text contrast is at least 4.5:1 (WCAG AA) in the ' + scheme + ' theme', async () => {
     const { page } = await phone(scheme);
