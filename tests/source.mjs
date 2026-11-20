@@ -7,10 +7,14 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = path.resolve(process.env.SHADJA_SITE || ROOT);   // same switch as harness.mjs
 
-export function loadRagas() {
+export function loadRagas() { return loadVar('RAGAS'); }
+export function loadThaats() { return loadVar('THAATS'); }   // #69
+
+// Lifts one top-level `var NAME = {...};` object literal out of index.html and evaluates it.
+export function loadVar(name) {
   const src = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8');
-  const start = src.indexOf('var RAGAS = {');
-  assert.ok(start > -1, 'var RAGAS not found in index.html');
+  const start = src.indexOf('var ' + name + ' = {');
+  assert.ok(start > -1, 'var ' + name + ' not found in index.html');
   // Match braces, skipping anything inside strings and comments, so a "{" or "}" in raga text can't end the block early.
   const open = src.indexOf('{', start);
   let depth = 0, i = open;
@@ -28,7 +32,7 @@ export function loadRagas() {
   try {
     return new Function('return ' + src.slice(open, i + 1))();
   } catch (e) {
-    throw new Error('could not parse RAGAS from index.html: ' + e.message);
+    throw new Error('could not parse ' + name + ' from index.html: ' + e.message);
   }
 }
 

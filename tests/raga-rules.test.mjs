@@ -2,7 +2,8 @@
 // Pure data test: no browser. The `var RAGAS = {...};` block is lifted out of index.html as text and evaluated.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadRagas } from './source.mjs';
+import { loadRagas, loadThaats } from './source.mjs';
+import { THAATS_EXPECTED } from './thaat-table.mjs';
 
 // Pitch class (0..11) of a semitone offset from Sa; works for lower and upper octaves.
 const pc = (n) => ((n % 12) + 12) % 12;
@@ -10,19 +11,9 @@ const pc = (n) => ((n % 12) + 12) % 12;
 const SWARA = ['Sa', 'Re', 'Re', 'Ga', 'Ga', 'Ma', 'Ma', 'Pa', 'Dha', 'Dha', 'Ni', 'Ni'];
 const NAME = ['Sa', 'Re♭', 'Re', 'Ga♭', 'Ga', 'Ma', 'Ma♯', 'Pa', 'Dha♭', 'Dha', 'Ni♭', 'Ni'];
 
-// The 10 thaats (parent scales), as pitch classes.
-export const THAATS = {
-  Kalyan:   [0, 2, 4, 6, 7, 9, 11],
-  Bilawal:  [0, 2, 4, 5, 7, 9, 11],
-  Khamaj:   [0, 2, 4, 5, 7, 9, 10],
-  Kafi:     [0, 2, 3, 5, 7, 9, 10],
-  Asavari:  [0, 2, 3, 5, 7, 8, 10],
-  Bhairavi: [0, 1, 3, 5, 7, 8, 10],
-  Bhairav:  [0, 1, 4, 5, 7, 8, 11],
-  Poorvi:   [0, 1, 4, 6, 7, 8, 11],
-  Marwa:    [0, 1, 4, 6, 7, 9, 11],
-  Todi:     [0, 1, 3, 6, 7, 8, 11],
-};
+// The 10 thaats (parent scales), as pitch classes. Since #69 the table lives in index.html (THAATS) and is lifted
+// from there; a test below checks it against the reference table in thaat-table.mjs.
+export const THAATS = Object.fromEntries(Object.entries(loadThaats()).map(([k, t]) => [k, t.notes]));
 
 // Rule 4 allow-list: raga name → pitch-class pairs that may sit back to back. Empty today.
 // (If Lalit is added, it needs [5, 6]: Lalit sings Ma and Ma♯ one after the other.)
@@ -107,6 +98,17 @@ for (const [name, r] of Object.entries(RAGAS)) {
     assert.deepEqual(failures, [], failures.join('\n'));
   });
 }
+
+test('THAATS in index.html matches the 10 thaats (#69)', () => {
+  const sorted = (o) => Object.fromEntries(Object.keys(o).sort().map((k) => [k, o[k]]));
+  assert.deepEqual(sorted(THAATS), sorted(THAATS_EXPECTED));
+});
+
+test('every raga names one of the 10 thaats (#69)', () => {
+  for (const [name, r] of Object.entries(RAGAS)) {
+    assert.ok(r.thaat in THAATS_EXPECTED, `${name}: thaat "${r.thaat}" is not one of the 10`);
+  }
+});
 
 test('every allow-list entry names a real raga', () => {
   for (const n of [...Object.keys(ADJACENT_OK), ...Object.keys(THAAT_OK)]) {
