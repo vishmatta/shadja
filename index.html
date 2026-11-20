@@ -188,6 +188,8 @@ details.adv[open] > summary { margin-bottom: 12px; }
 .t-status { font-size: .85rem; color: var(--muted); min-height: 1.3em; }
 .t-hist-wrap { margin-top: 12px; }
 .t-hist-wrap[hidden] { display: none; }
+.echo-why { margin: 8px 0 0; }
+.echo-why[hidden] { display: none; }
 .mic-box { margin: 14px 0 0; }
 .mic-box .numbering { margin-top: 10px; }
 .mic-box select { margin-bottom: 0; }
@@ -454,6 +456,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
         <div class="t-hist-wrap" id="tHistWrap" hidden>
           <span class="field-label" id="tHistLabel">Your last notes (newest on the right)</span>
           <div class="echo-notes" id="tHist" role="group" aria-labelledby="tHistLabel"></div>
+          <p class="echo-why" id="tHistWhy" hidden></p>
         </div>
         <div class="hold" id="holdBox">
           <span class="field-label" id="holdTitle">Hold a note</span>
@@ -1435,6 +1438,10 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       var mark = e.cls === 'ok' ? ' ✓' : e.inSet ? ' ' + fmtCents(e.c) : ' ✗';
       return '<span class="echo-note ' + (e.cls === 'ok' ? 'ok' : 'no') + '" title="' + e.title.replace(/"/g, '&quot;') + '">' + tunerLabel(e.n) + mark + '</span>';
     }).join('');
+    var w = '';                                                         // the latest raga rule broken among these notes (#68)
+    h.forEach(function (e) { if (e.why) w = e.why; });
+    $('tHistWhy').textContent = w;
+    $('tHistWhy').hidden = !w;
   }
   function finishSeg() {
     var sg = tuner.seg;
@@ -1451,8 +1458,14 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     var sd = Math.sqrt(cs.reduce(function (p, q) { return p + (q - mean) * (q - mean); }, 0) / cs.length);
     var steady = sd < 10 ? ' Steady.' : sd < 25 ? ' A little wobbly.' : ' Unsteady: try holding it calmer.';
     var v = verdict(n, mean, steady), msg = 'You held it ' + (sg.a.length * TN.frame).toFixed(1) + ' s. ' + v[1];
+    var inSet = scaleNotes().indexOf(pcOf(n)) > -1 && !!state.enabled[pcOf(n)], why = '';
+    if (isRaga() && inSet) {                                            // a raga rule this note breaks, after the notes before it (#68)
+      var hn = tuner.hist.map(function (e) { return e.n; }).concat([n]);
+      phraseRules(hn, { name: state.scale, r: RAGAS[state.scale] }, true).forEach(function (x) { if (!why && x.at === hn.length - 1) why = x.why; });
+      if (why) msg += ' ' + why;
+    }
     tunerShow(n, mean, msg, v[0], mean);
-    tuner.hist.push({ n: n, c: mean, cls: v[0], inSet: scaleNotes().indexOf(pcOf(n)) > -1 && !!state.enabled[pcOf(n)], title: msg });
+    tuner.hist.push({ n: n, c: mean, cls: v[0], inSet: inSet, why: why, title: msg });
     if (tuner.hist.length > TN.hist) tuner.hist.shift();
     if (echo.sung && echo.phase === 'turn') echo.sung.push({ n: n, c: mean });   // call and response: only notes finished during your turn
     renderHist();
@@ -1731,8 +1744,10 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   // so another octave counts. Aligns the two lists by edit distance, so a missed or extra note doesn't shift the rest;
   // a run of identical target notes may share one sung note (legato). Returns { results, extra }: one result per
   // non-breath target note, { pc, status: 'right', cents } | { pc, status: 'wrong', sung: pc } | { pc, status: 'missed' };
-  // extra = number of sung notes that matched no target note.
-  function checkPhrase(target, sung) {
+  // extra = number of sung notes that matched no target note. raga (optional, raga mode only) = { name, r: RAGAS[name] }:
+  // then the result also has why, the first raga rule the sung notes break (phraseRules), or null. A rule the target
+  // phrase itself breaks the same way is not held against you.
+  function checkPhrase(target, sung, raga) {
     var T = target.filter(function (x) { return x !== null && x !== undefined; }).map(function (x) { return ((x % 12) + 12) % 12; });
     var S = sung.map(function (x) { return ((x.n % 12) + 12) % 12; });
     var I = 1e9, d = [], par = [], i, j, k;
@@ -1763,10 +1778,44 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       else if (o[0] === 'right') results.push({ pc: T[t], status: 'right', cents: sung[s].c });
       else results.push({ pc: T[t], status: 'right', cents: results[results.length - 1].cents });
     });
-    return { results: results, extra: extra };
+    if (!raga) return { results: results, extra: extra };
+    var tw = phraseRules(target, raga).map(function (x) { return x.why; });
+    var sw = phraseRules(sung.map(function (x) { return x.n; }), raga).filter(function (x) { return tw.indexOf(x.why) < 0; });
+    return { results: results, extra: extra, why: sw.length ? sw[0].why : null };
+  }
+  // phraseRules(ns, raga, open): pure, no DOM or state. ns = notes in the order sung (semitone offsets from Sa; null =
+  // breath, skipped; a repeated note counts once). Returns every raga rule broken, in order, as { at: index in ns of
+  // the note it is about, why: a short reason for a beginner }. Per note: (1) a note outside the raga; (2) natural and
+  // altered forms of one note back to back (Ga♭ Ga); (3) a move the raga doesn't make, judged by moveOk, the same
+  // rule strict mode uses for taps. Then (4) the phrase ends on a note that isn't a resting note (raga.r.rest, plus
+  // Sa), unless open (the phrase isn't over yet, as in the tuner history).
+  function phraseRules(ns, raga, open) {
+    var r = raga.r, name = raga.name, out = [], has = {}, s = [], at = [];
+    var pc = function (n) { return ((n % 12) + 12) % 12; }, nm = function (n) { return SARGAM[pc(n)]; };
+    r.aroha.concat(r.avaroha).forEach(function (n) { if (n !== null) has[pc(n)] = true; });
+    ns.forEach(function (n, i) {
+      if (n === null || n === undefined || n === s[s.length - 1]) return;
+      s.push(n); at.push(i);
+    });
+    s.forEach(function (n, i) {
+      var a = i > 0 ? s[i - 1] : null, lo = a === null ? -1 : Math.min(pc(a), pc(n));
+      if (!has[pc(n)]) out.push({ at: at[i], why: nm(n) + ' isn’t in ' + name + '.' });
+      else if (a === null || !has[pc(a)]) return;
+      else if (Math.abs(pc(a) - pc(n)) === 1 && [1, 3, 5, 8, 10].indexOf(lo) > -1)
+        out.push({ at: at[i], why: nm(a) + ' then ' + nm(n) + ': two forms of ' + SARGAM[lo].replace(/[♭♯]/, '') +
+          ' back to back. ' + name + ' never puts them side by side; sing another note between them.' });
+      else if (!moveOk(r, a, n, i > 1 ? s[i - 2] : undefined)) out.push({ at: at[i], why: moveWhy(r, name, a, n > a, '') });
+    });
+    var last = s[s.length - 1], rest = r.rest.indexOf(0) > -1 ? r.rest : r.rest.concat([0]);
+    if (!open && s.length && has[pc(last)] && rest.indexOf(pc(last)) < 0) {
+      var rn = rest.map(function (n) { return SARGAM[n]; });
+      out.push({ at: at[s.length - 1], why: nm(last) + ' isn’t a resting note in ' + name + '. Try ending on ' +
+        rn.slice(0, -1).join(', ') + ' or ' + rn[rn.length - 1] + '.' });
+    }
+    return out;
   }
   function echoSungHtml(sung) {
-    var r = checkPhrase(echo.phrase, sung), right = 0;
+    var r = checkPhrase(echo.phrase, sung, isRaga() ? { name: state.scale, r: RAGAS[state.scale] } : null), right = 0;
     var chips = r.results.map(function (x) {
       var ok = x.status === 'right', txt = noteName(x.pc);
       if (ok) {
@@ -1776,7 +1825,8 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       } else txt += x.status === 'wrong' ? ' ✗ <small>you sang ' + noteName(x.sung) + '</small>' : ' – <small>not heard</small>';
       return '<span class="echo-note ' + (ok ? 'ok' : 'no') + '">' + txt + '</span>';
     });
-    return '<p><b>' + right + ' of ' + r.results.length + ' notes right.</b>' + (r.extra ? ' You also sang ' + r.extra + ' extra note' + (r.extra > 1 ? 's' : '') + '.' : '') + ' Listen again:</p><div class="echo-notes">' + chips.join('') + '</div>';
+    return '<p><b>' + right + ' of ' + r.results.length + ' notes right.</b>' + (r.extra ? ' You also sang ' + r.extra + ' extra note' + (r.extra > 1 ? 's' : '') + '.' : '') + ' Listen again:</p><div class="echo-notes">' + chips.join('') + '</div>' +
+      (r.why ? '<p class="echo-why">' + r.why + '</p>' : '');
   }
   function echoPhrase() {
     if (isRaga()) return ragaWalk().slice(0, 3 + Math.floor(Math.random() * 3));
@@ -1908,6 +1958,24 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     });
   }
 
+  // moveWhy(r, name, from, up, tag): pure. Why a move out of `from` (up or down) breaks raga r, for a beginner. Names
+  // the raga's own turns out of this note in this direction (Bihag: Pa Ma♯ Pa), so the message doesn't seem to
+  // contradict a move that is allowed. tag follows the note name (the key number for taps). Shared by strict-mode
+  // taps and sung-phrase feedback (#68).
+  function moveWhy(r, name, from, up, tag) {
+    var pc = function (n) { return ((n % 12) + 12) % 12; }, f = SARGAM[pc(from)], turns = [];
+    [r.aroha, r.avaroha, r.pakad].forEach(function (s) {
+      for (var j = 1; j + 1 < s.length; j++) {
+        var a = s[j - 1], b = s[j], c = s[j + 1];
+        if (a === null || b === null || c === null || pc(b) !== pc(from) || (c > b) !== up || b === c) continue;
+        var t = [a, b, c].map(function (n) { return SARGAM[pc(n)]; }).join(' ');
+        if (turns.indexOf(t) < 0) turns.push(t);
+      }
+    });
+    return 'After ' + f + tag + ', ' + name + ' goes ' + (up ? 'down' : 'up') + ': ' + f + ' isn’t used going ' + (up ? 'up' : 'down') +
+      (turns.length ? ', except in the turn ' + turns.join(' or ') : '') + '.';
+  }
+
   // The one rule path for a played note, shared by the on-screen keys and the MIDI keyboard.
   // Returns true when the note may sound; otherwise it has already shown why (status, bad flash).
   function tapAllowed(k, inScale, ghost) {
@@ -1916,20 +1984,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       var now = Date.now(), last = state.lastTap, recent = last && now - last.t < 4000;
       if (recent && last.i !== k.i) {
         if (!moveOk(RAGAS[state.scale], last.i, k.i, last.prev)) {
-          var r = RAGAS[state.scale], from = SARGAM[pcOf(last.i)], up = k.i > last.i, turns = [];
-          // Name the raga's own turns out of this note in this direction (Bihag: Pa Ma♯ Pa), so the message
-          // doesn't seem to contradict a move that is allowed.
-          [r.aroha, r.avaroha, r.pakad].forEach(function (s) {
-            for (var j = 1; j + 1 < s.length; j++) {
-              var a = s[j - 1], b = s[j], c = s[j + 1];
-              if (a === null || b === null || c === null || pcOf(b) !== pcOf(last.i) || (c > b) !== up || b === c) continue;
-              var t = [a, b, c].map(function (n) { return SARGAM[pcOf(n)]; }).join(' ');
-              if (turns.indexOf(t) < 0) turns.push(t);
-            }
-          });
-          setStatus('After ' + from + ' (' + (pcOf(last.i) + state.base) + '), ' + state.scale + ' goes ' + (up ? 'down' : 'up') +
-            ': ' + from + ' isn’t used going ' + (up ? 'up' : 'down') +
-            (turns.length ? ', except in the turn ' + turns.join(' or ') : '') + '.', true);
+          setStatus(moveWhy(RAGAS[state.scale], state.scale, last.i, k.i > last.i, ' (' + (pcOf(last.i) + state.base) + ')'), true);
           markBad(k.i);
           return false;
         }

@@ -93,8 +93,12 @@ export const VOICES = {
   short04:  [{ rest: 1 }, { n: 4, dur: 0.4 }],
   short02:  [{ rest: 1 }, { n: 4, dur: 0.2 }],
   scoop:    [{ rest: 1 }, { n: 2, dur: 1.2, scoop: { from: -100, time: 0.15 } }],
-  // a voice crack: Re with 0.1 s jumping 150¢ up in the middle, all legato
-  crack:    [{ rest: 1 }, { n: 2, dur: 0.5 }, { n: 2, c: 150, dur: 0.1 }, { n: 2, dur: 0.5 }],
+  // a voice crack: Re jumps 150¢ up for 0.1 s in the middle, all legato. The crack part is 0.06 s (40 ms glide up, then
+  // 20 ms at the top) and the next Re glides back down over 40 ms: 0.1 s off Re in all. Frames (2048-sample window) read
+  // more than the tuner's 70¢ jump from Re over about 64 ms, so at most 2 frames 50 ms apart can see it, with ~36 ms to
+  // spare before a 3rd would (the 3-frame confirm rule), and at least 1 always does. A 0.1 s crack part made that span
+  // 104 ms: 3 frames in 4 of 50 tick phases, which split the Re (#76).
+  crack:    [{ rest: 1 }, { n: 2, dur: 0.5 }, { n: 2, c: 150, dur: 0.06 }, { n: 2, dur: 0.5 }],
   vibrato:  [{ rest: 1 }, { n: 4, dur: 1.5, vib: { depth: 30, rate: 5.5 } }],
   quiet:    [{ rest: 1 }, { n: 0, dur: 1.2, amp: 0.012 }],
   silence:  [{ rest: 3 }],
