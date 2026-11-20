@@ -2,37 +2,7 @@
 // Pure data test: no browser. The `var RAGAS = {...};` block is lifted out of index.html as text and evaluated.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = path.resolve(process.env.SHADJA_SITE || ROOT);   // same switch as harness.mjs
-
-function loadRagas() {
-  const src = fs.readFileSync(path.join(SITE, 'index.html'), 'utf8');
-  const start = src.indexOf('var RAGAS = {');
-  assert.ok(start > -1, 'var RAGAS not found in index.html');
-  // Match braces, skipping anything inside strings and comments, so a "{" or "}" in raga text can't end the block early.
-  const open = src.indexOf('{', start);
-  let depth = 0, i = open;
-  for (; i < src.length; i++) {
-    const c = src[i];
-    if (c === '"' || c === "'" || c === '`') {
-      for (i++; i < src.length && src[i] !== c; i++) if (src[i] === '\\') i++;
-    } else if (c === '/' && src[i + 1] === '/') {
-      i = src.indexOf('\n', i); if (i < 0) i = src.length;
-    } else if (c === '/' && src[i + 1] === '*') {
-      i = src.indexOf('*/', i + 2); i = i < 0 ? src.length : i + 1;
-    } else if (c === '{') depth++;
-    else if (c === '}' && --depth === 0) break;
-  }
-  try {
-    return new Function('return ' + src.slice(open, i + 1))();
-  } catch (e) {
-    throw new Error('could not parse RAGAS from index.html: ' + e.message);
-  }
-}
+import { loadRagas } from './source.mjs';
 
 // Pitch class (0..11) of a semitone offset from Sa; works for lower and upper octaves.
 const pc = (n) => ((n % 12) + 12) % 12;

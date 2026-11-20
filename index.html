@@ -1779,6 +1779,26 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     if (bad) statusTimer = setTimeout(function () { setStatus(defaultStatus(), false); }, 2500);
   }
 
+  // moveOk(r, from, to): pure, no DOM or state. May a melody move from note `from` to note `to` (semitone offsets
+  // from Sa) in raga r? The rule judges the note you LEAVE, not the note you reach (#74): a note used only coming
+  // down (↓, e.g. Pa in Yaman) may be reached from below, but the next note must be lower; a ↑ note likewise must
+  // be followed by a higher one. The exact move the aroha, avaroha or pakad itself makes is always allowed (Bihag's
+  // Ma♯ → Pa, but not Ma♯ → Dha; Bageshree's Ma Pa Dha). A breath (null) in the pakad separates notes.
+  function moveOk(r, from, to) {
+    if (from === to) return true;
+    var pc = function (n) { return ((n % 12) + 12) % 12; };
+    var f = pc(from), up = to > from;
+    if ((up ? r.aroha : r.avaroha).some(function (n) { return pc(n) === f; })) return true;
+    return [r.aroha, r.avaroha, r.pakad].some(function (s) {
+      for (var i = 0; i + 1 < s.length; i++) {
+        var a = s[i], b = s[i + 1];
+        if (a === null || b === null || a === b) continue;
+        if (pc(a) === f && pc(b) === pc(to) && (b > a) === up) return true;
+      }
+      return false;
+    });
+  }
+
   // The one rule path for a played note, shared by the on-screen keys and the MIDI keyboard.
   // Returns true when the note may sound; otherwise it has already shown why (status, bad flash).
   function tapAllowed(k, inScale, ghost) {
@@ -1786,9 +1806,10 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     if (isRaga() && state.strict && inScale) {
       var now = Date.now(), last = state.lastTap;
       if (last && now - last.t < 4000 && last.i !== k.i) {
-        var info = ragaInfo(state.scale), rel = pcOf(k.i), up = k.i > last.i;
-        if (!(up ? info.aro[rel] : info.ava[rel])) {
-          setStatus(SARGAM[rel] + ' (' + (rel + state.base) + ') isn’t used going ' + (up ? 'up' : 'down') + ' in ' + state.scale + '.', true);
+        if (!moveOk(RAGAS[state.scale], last.i, k.i)) {
+          var from = SARGAM[pcOf(last.i)], up = k.i > last.i;
+          setStatus('After ' + from + ' (' + (pcOf(last.i) + state.base) + '), ' + state.scale + ' goes ' + (up ? 'down' : 'up') +
+            ': ' + from + ' isn’t used going ' + (up ? 'up' : 'down') + '.', true);
           markBad(k.i);
           return false;
         }
@@ -2174,8 +2195,8 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     $('stepRow').hidden = locked;
     $('numbers').classList.toggle('split', raga);
     $('stripHint').textContent = !raga ? 'Tap a cell to turn a note on or off.'
-      : locked ? 'Full raga is on. ↑ only going up, ↓ only going down. Turn on Practice subset to drop notes.'
-      : 'Tap a cell to turn a note on or off. ↑ only going up, ↓ only going down.';
+      : locked ? 'Full raga is on. After a ↑ note go higher; after a ↓ note go lower. Turn on Practice subset to drop notes.'
+      : 'Tap a cell to turn a note on or off. After a ↑ note go higher; after a ↓ note go lower.';
     $('oVal').textContent = state.octave;
     $('oDn').disabled = state.octave <= 1;
     $('oUp').disabled = state.octave >= 6;

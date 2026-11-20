@@ -55,7 +55,8 @@ Python 3 is already on GitHub's Ubuntu runners.
 | `tuner.test.mjs` | Held notes at known cents, legato runs, a 0.4 s note, a too-short note, a scoop, a voice crack, vibrato, quiet humming, silence, drone bleed, Live mode, Western mode, mic cleanup and mic choice (#16, #17) |
 | `hold.test.mjs` | The hold exercise: steady, 40¢ flat in Live mode, wobbly (#29) |
 | `echo.test.mjs` | `checkPhrase` unit cases, and one phrase sung back into the mic (#18) |
-| `raga-rules.test.mjs` | Every raga in `RAGAS` against the raga grammar (#66): 5 to 7 notes, Sa, Ma or Pa, no altered note next to its natural, vadi/samvadi/rest/pakad use raga notes, notes fit the thaat. Vadi–samvadi not a 4th or 5th is a warning only. Pure data, no browser: runs alone in under a second with `node --test raga-rules.test.mjs`. Allow-lists at the top of the file give the reason for each exception. |
+| `raga-rules.test.mjs` | Every raga in `RAGAS` against the raga grammar (#66): 5 to 7 notes, Sa, Ma or Pa, no altered note next to its natural, vadi/samvadi/rest/pakad use raga notes, notes fit the thaat. Vadi–samvadi not a 4th or 5th is a warning only. Pure data, no browser (the loader is in `source.mjs`): runs alone in under a second with `node --test raga-rules.test.mjs`. Allow-lists at the top of the file give the reason for each exception. |
+| `move-rule.test.mjs` | Strict mode's move rule (#74): `moveOk` unit cases (a ↓ note may be reached from below but must be left going down; a raga's own vakra moves are allowed; every move in each raga's aroha, avaroha and pakad passes), plus one browser check of the tap path in Yaman. |
 
 ## Testing another copy of the app
 `SHADJA_SITE=<dir> npm test` serves `<dir>` instead of the repo root. Use it to check that the tests catch a deliberate break, or to run the same suite before and after the module split (#61).
