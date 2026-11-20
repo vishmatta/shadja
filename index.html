@@ -47,7 +47,7 @@ h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 4
 @media (min-width: 800px) {
   .layout { grid-template-columns: 380px minmax(0, 1fr); column-gap: 24px; row-gap: 0; }
   .layout > * { grid-column: 1; margin-bottom: 16px; }
-  .layout > .stage-col { grid-column: 2; grid-row: 1 / span 5; margin-bottom: 0; }
+  .layout > .stage-col { grid-column: 2; grid-row: 1 / span 6; margin-bottom: 0; }
   .stage { position: sticky; top: calc(16px + env(safe-area-inset-top, 0px)); }
 }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
@@ -152,6 +152,13 @@ details.adv[open] > summary { margin-bottom: 12px; }
 .howto summary { cursor: pointer; font-weight: 600; color: var(--scale); min-height: 28px; }
 .howto summary:focus-visible { outline: 3px solid var(--scale); outline-offset: 2px; }
 .howto p { margin: 8px 0 0; color: var(--muted); }
+.what-lede { margin: 0 0 6px; }
+.what { margin: 0; padding-left: 1.3em; font-size: .9rem; line-height: 1.35; }
+.what li { margin: 0 0 5px; }
+.what li::marker { color: var(--muted); font-weight: 600; }
+.go { font: inherit; font-weight: 600; color: var(--scale); background: none; border: 0; padding: 3px 0; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; white-space: nowrap; }
+.go::after { content: " →"; }
+.go:focus-visible, #ragaMeta dt:focus, #rrOrn:focus { outline: 3px solid var(--scale); outline-offset: 2px; border-radius: 4px; }
 .tempo { display: flex; align-items: flex-end; gap: 14px; margin-top: 16px; }
 .sing { text-align: center; margin-top: 0; padding: 12px 8px; border: 1px solid var(--line); border-radius: 12px; }
 .sing-now { font-size: 3rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; min-height: 1.15em; }
@@ -483,10 +490,25 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
         </details>
       </div>
 
+      <details class="panel adv" id="whatPanel" hidden>
+        <summary>What makes a raga?</summary>
+        <p class="hint what-lede">A raga is more than a scale. Eight things make one:</p>
+        <ol class="what">
+          <li><b>Sa never leaves.</b> Every note is heard against Sa, and the drone keeps Sa sounding. <button type="button" class="go" data-target="droneBtn" aria-label="Drone: go to the drone button">Drone</button></li>
+          <li><b>5 to 7 notes.</b> Five notes is Audav, six is Shadav, all seven is Sampurna. <button type="button" class="go" data-target="rr-jati" aria-label="Note count: go to Jati in Raga rules">Note count</button></li>
+          <li><b>Ma or Pa stays.</b> A raga can drop some notes, but never both Ma and Pa. <button type="button" class="go" data-target="rr-aroha" aria-label="Its notes: go to the aroha in Raga rules">Its notes</button></li>
+          <li><b>A path up and a path down.</b> The aroha (way up) and avaroha (way down) can differ, and some zigzag. <button type="button" class="go" data-target="rr-aroha" aria-label="Up and down: go to the aroha and avaroha in Raga rules">Up and down</button></li>
+          <li><b>A main note and a partner.</b> The vadi and samvadi are the two most important notes, usually a 4th or 5th apart. <button type="button" class="go" data-target="rr-vadi" aria-label="Vadi: go to vadi and samvadi in Raga rules">Vadi</button></li>
+          <li><b>A signature phrase.</b> The pakad is the short phrase that tells a listener which raga it is. <button type="button" class="go" data-target="mode-pakad" aria-label="Pakad button: go to the Pakad play order">Pakad button</button></li>
+          <li><b>Glides and sways.</b> Some notes slide (meend) or sway slowly (andolan), but Sa and Pa never sway; the app doesn’t play these yet. <button type="button" class="go" data-target="rrOrn" aria-label="More: go to the note about ornaments in Raga rules">More</button></li>
+          <li><b>A time and a mood.</b> Each raga has a time of day and a feeling (rasa), which a scale exercise doesn’t. <button type="button" class="go" data-target="rr-feel" aria-label="Feel and time: go to them in Raga rules">Feel and time</button></li>
+        </ol>
+      </details>
+
       <details class="panel adv" id="ragaPanel" hidden>
         <summary>Raga rules</summary>
         <dl class="meta" id="ragaMeta"></dl>
-        <p class="hint" style="margin-top:12px">◯ on a key = resting note. ♭ = komal, ♯ = tivra. A dot below a note means the lower octave, a dot above means the upper octave. These are common textbook forms; gharanas differ, and ornaments like andolan and meend aren’t played yet.</p>
+        <p class="hint" id="rrOrn" tabindex="-1" style="margin-top:12px">◯ on a key = resting note. ♭ = komal, ♯ = tivra. A dot below a note means the lower octave, a dot above means the upper octave. These are common textbook forms; gharanas differ, and ornaments like andolan and meend aren’t played yet.</p>
       </details>
 
       <details class="panel adv" id="midiPanel">
@@ -2225,6 +2247,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     $('tmLive').setAttribute('aria-pressed', String(state.tunerMode === 'live'));
     $('rulesWrap').hidden = !raga;
     $('ragaPanel').hidden = !raga;
+    $('whatPanel').hidden = !raga;
     $('sessPanel').hidden = !raga;
     $('sessIdle').hidden = sess.on; $('sessRun').hidden = !sess.on;
     [5, 10, 20].forEach(function (m) { $('sessMin' + m).setAttribute('aria-pressed', String(state.sessMin === m)); });
@@ -2298,7 +2321,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       if (grp[0]) { var h = document.createElement('p'); h.className = 'mode-group'; h.textContent = grp[0]; mEl.appendChild(h); }
       grp[1].forEach(function (m) {
         var b = document.createElement('button');
-        b.type = 'button'; b.className = 'chip'; b.textContent = m[1];
+        b.type = 'button'; b.className = 'chip'; b.textContent = m[1]; b.id = 'mode-' + m[0];
         b.setAttribute('aria-pressed', String(state.mode === m[0]));
         b.addEventListener('click', function () { state.mode = m[0]; render(); });
         mEl.appendChild(b);
@@ -2477,7 +2500,12 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
       if (upOnly.length) rows.push(['Only going up ↑', upOnly.map(named).join(', ')]);
       if (downOnly.length) rows.push(['Only going down ↓', downOnly.map(named).join(', ')]);
       if (r.note) rows.push(['Note', r.note]);
-      $('ragaMeta').innerHTML = rows.map(function (row) { return '<dt>' + row[0] + '</dt><dd>' + row[1] + '</dd>'; }).join('');
+      // Row ids let "What makes a raga?" link straight to a row (#71).
+      var rowId = { 'Feel': 'rr-feel', 'Jati (note count)': 'rr-jati', 'Aroha (going up)': 'rr-aroha',
+        'Vadi / samvadi (most / second most important)': 'rr-vadi' };
+      $('ragaMeta').innerHTML = rows.map(function (row) {
+        return '<dt' + (rowId[row[0]] ? ' id="' + rowId[row[0]] + '" tabindex="-1"' : '') + '>' + row[0] + '</dt><dd>' + row[1] + '</dd>';
+      }).join('');
     }
   }
 
@@ -2576,6 +2604,18 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
     render();
   }
   $('resetBtn').addEventListener('click', resetSettings);
+
+  // "What makes a raga?" (#71): each line's button opens the panel holding its target, then scrolls to and focuses it.
+  document.querySelectorAll('#whatPanel .go').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var el = $(b.getAttribute('data-target'));
+      if (!el) return;
+      var d = el.closest('details');
+      if (d) d.open = true;
+      el.scrollIntoView({ block: 'center' });
+      el.focus({ preventScroll: true });
+    });
+  });
   loadSettings();
 
   $('awakeRow').hidden = !wakeOK;

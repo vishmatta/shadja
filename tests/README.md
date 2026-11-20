@@ -57,6 +57,7 @@ Python 3 is already on GitHub's Ubuntu runners.
 | `echo.test.mjs` | `checkPhrase` unit cases, and one phrase sung back into the mic (#18) |
 | `raga-rules.test.mjs` | Every raga in `RAGAS` against the raga grammar (#66): 5 to 7 notes, Sa, Ma or Pa, no altered note next to its natural, vadi/samvadi/rest/pakad use raga notes, notes fit the thaat. Vadi–samvadi not a 4th or 5th is a warning only. Pure data, no browser (the loader is in `source.mjs`): runs alone in under a second with `node --test raga-rules.test.mjs`. Allow-lists at the top of the file give the reason for each exception. |
 | `move-rule.test.mjs` | Strict mode's move rule (#74): `moveOk` unit cases (a ↓ note may be reached from below but must be left going down; a raga's own vakra moves are allowed; every move in each raga's aroha, avaroha and pakad passes), plus one browser check of the tap path in Yaman. |
+| `explainer.test.mjs` | The "What makes a raga?" panel (#71): hidden in Western mode, eight lines with named link buttons, each link opens, scrolls to and focuses its target, fits a 380×763 screen with no sideways scroll, text contrast at least 4.5:1 in light and dark. |
 
 ## Testing another copy of the app
 `SHADJA_SITE=<dir> npm test` serves `<dir>` instead of the repo root. Use it to check that the tests catch a deliberate break, or to run the same suite before and after the module split (#61).
