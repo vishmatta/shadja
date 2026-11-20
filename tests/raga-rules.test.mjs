@@ -87,10 +87,11 @@ export function checkRaga(name, r, opts = {}) {
   // 3. Ma or Pa is present.
   if (!notes.has(5) && !notes.has(6) && !notes.has(7)) fail('3 (Ma or Pa present)', 'has neither Ma nor Pa');
 
-  // 4. No natural and altered form of one note back to back.
+  // 4. No natural and altered form of one note back to back. A breath (null) separates notes, so pairs across it are fine.
   for (const part of ['aroha', 'avaroha', 'pakad']) {
-    const seq = (r[part] || []).filter((n) => n !== null);
+    const seq = r[part] || [];
     for (let i = 1; i < seq.length; i++) {
+      if (seq[i - 1] === null || seq[i] === null) continue;
       const a = pc(seq[i - 1]), b = pc(seq[i]);
       const pair = ALTERED_PAIRS.find(([x, y]) => (a === x && b === y) || (a === y && b === x));
       if (pair && !adjOk.some(([x, y]) => x === pair[0] && y === pair[1])) {
@@ -164,6 +165,12 @@ test('self-check: a broken raga (no Sa, Ga♭ next to Ga) fails with named rules
   assert.ok(t2.failures.some((f) => /^Tiny: rule 1 /.test(f)), 'too few notes not caught');
   assert.ok(t2.failures.some((f) => /^Tiny: rule 3 /.test(f)), 'no Ma or Pa not caught');
   assert.ok(t2.warnings.some((w) => /^Tiny: rule 7 /.test(w)), 'vadi–samvadi gap not warned');
+
+  // A breath between Ga and Ga♭ is not back to back; without the breath it is.
+  const base = { thaat: 'Kafi', vadi: 7, samvadi: 0, rest: [], aroha: [0, 2, 3, 5, 7, 9, 10, 12], avaroha: [12, 10, 9, 7, 5, 4, 3, 2, 0] };
+  const rule4 = (pakad) => checkRaga('Breath', { ...base, pakad }).failures.filter((f) => /rule 4/.test(f));
+  assert.deepEqual(rule4([4, null, 3]).filter((f) => /pakad/.test(f)), [], 'a breath should separate Ga and Ga♭');
+  assert.ok(rule4([4, 3]).some((f) => /pakad has Ga next to Ga♭/.test(f)), 'Ga then Ga♭ in pakad not caught');
 
   // Allow-lists work, and only for the raga they name.
   const lalitish = { thaat: 'Marwa', vadi: 5, samvadi: 0, rest: [], aroha: [0, 1, 4, 5, 6, 9, 11, 12], avaroha: [12, 11, 9, 6, 5, 4, 1, 0], pakad: [] };
