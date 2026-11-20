@@ -50,6 +50,7 @@ test('Khamaj: natural Ni must be followed by a higher note', () => {
 test('a breath in the pakad does not make a move', () => {
   const r = { aroha: [Sa, Re, Ga, SA], avaroha: [SA, Ga, Re, Sa], pakad: [Pa, null, Dha] };
   assert.equal(moveOk(r, Pa, Dha), false, 'Pa, breath, Dha is not a Pa → Dha move');
+  assert.equal(moveOk(r, Pa, Sa), false, 'a breath is not Sa: Pa, breath is not a Pa → Sa move (#75 review, finding 2)');
   assert.equal(moveOk({ ...r, pakad: [Pa, Dha] }, Pa, Dha), true, 'Pa → Dha with no breath is');
 });
 
