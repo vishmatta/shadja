@@ -491,14 +491,14 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
         <summary>What makes a raga?</summary>
         <p class="hint what-lede">A raga is more than a scale. Eight things make one:</p>
         <ol class="what">
-          <li><b>Sa never leaves.</b> Every note is heard against Sa, and the drone keeps Sa sounding. <button type="button" class="go" aria-controls="droneBtn" aria-label="Go to the drone button">Drone</button></li>
-          <li><b>5 to 7 notes.</b> Five notes is Audav, six is Shadav, all seven is Sampurna. <button type="button" class="go" aria-controls="rr-jati" aria-label="Go to Jati (note count) in Raga rules">Note count</button></li>
-          <li><b>Ma or Pa stays.</b> A raga can drop some notes, but never both Ma and Pa. <button type="button" class="go" aria-controls="rr-aroha" aria-label="Go to the aroha in Raga rules">Its notes</button></li>
-          <li><b>A path up and a path down.</b> The aroha (way up) and avaroha (way down) can differ, and some zigzag. <button type="button" class="go" aria-controls="rr-aroha" aria-label="Go to the aroha and avaroha in Raga rules">Up and down</button></li>
-          <li><b>A main note and a partner.</b> The vadi and samvadi are the two most important notes, usually a 4th or 5th apart. <button type="button" class="go" aria-controls="rr-vadi" aria-label="Go to vadi and samvadi in Raga rules">Vadi</button></li>
-          <li><b>A signature phrase.</b> The pakad is the short phrase that tells a listener which raga it is. <button type="button" class="go" aria-controls="mode-pakad" aria-label="Go to the Pakad play order, to hear it">Hear it</button></li>
-          <li><b>Glides and sways.</b> Some notes slide (meend) or sway slowly (andolan), but Sa and Pa never sway; the app doesn’t play these yet. <button type="button" class="go" aria-controls="rrOrn" aria-label="Go to the note about ornaments in Raga rules">More</button></li>
-          <li><b>A time and a mood.</b> Each raga has a time of day and a feeling (rasa), which a scale exercise doesn’t. <button type="button" class="go" aria-controls="rr-feel" aria-label="Go to feel and time in Raga rules">Feel and time</button></li>
+          <li><b>Sa never leaves.</b> Every note is heard against Sa, and the drone keeps Sa sounding. <button type="button" class="go" data-target="droneBtn" aria-label="Drone: go to the drone button">Drone</button></li>
+          <li><b>5 to 7 notes.</b> Five notes is Audav, six is Shadav, all seven is Sampurna. <button type="button" class="go" data-target="rr-jati" aria-label="Note count: go to Jati in Raga rules">Note count</button></li>
+          <li><b>Ma or Pa stays.</b> A raga can drop some notes, but never both Ma and Pa. <button type="button" class="go" data-target="rr-aroha" aria-label="Its notes: go to the aroha in Raga rules">Its notes</button></li>
+          <li><b>A path up and a path down.</b> The aroha (way up) and avaroha (way down) can differ, and some zigzag. <button type="button" class="go" data-target="rr-aroha" aria-label="Up and down: go to the aroha and avaroha in Raga rules">Up and down</button></li>
+          <li><b>A main note and a partner.</b> The vadi and samvadi are the two most important notes, usually a 4th or 5th apart. <button type="button" class="go" data-target="rr-vadi" aria-label="Vadi: go to vadi and samvadi in Raga rules">Vadi</button></li>
+          <li><b>A signature phrase.</b> The pakad is the short phrase that tells a listener which raga it is. <button type="button" class="go" data-target="mode-pakad" aria-label="Pakad button: go to the Pakad play order">Pakad button</button></li>
+          <li><b>Glides and sways.</b> Some notes slide (meend) or sway slowly (andolan), but Sa and Pa never sway; the app doesn’t play these yet. <button type="button" class="go" data-target="rrOrn" aria-label="More: go to the note about ornaments in Raga rules">More</button></li>
+          <li><b>A time and a mood.</b> Each raga has a time of day and a feeling (rasa), which a scale exercise doesn’t. <button type="button" class="go" data-target="rr-feel" aria-label="Feel and time: go to them in Raga rules">Feel and time</button></li>
         </ol>
       </details>
 
@@ -2553,7 +2553,7 @@ input[type="range"]:focus-visible { outline:3px solid var(--scale); outline-offs
   // "What makes a raga?" (#71): each line's button opens the panel holding its target, then scrolls to and focuses it.
   document.querySelectorAll('#whatPanel .go').forEach(function (b) {
     b.addEventListener('click', function () {
-      var el = $(b.getAttribute('aria-controls'));
+      var el = $(b.getAttribute('data-target'));
       if (!el) return;
       var d = el.closest('details');
       if (d) d.open = true;

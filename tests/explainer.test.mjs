@@ -37,13 +37,14 @@ test('eight lines, each with a named link button that points at an existing cont
   try {
     const items = await page.$$eval('#whatPanel ol.what > li', (lis) => lis.map((li) => {
       const b = li.querySelector('button.go');
-      const id = b && b.getAttribute('aria-controls');
-      return { text: li.textContent, type: b && b.type, label: b && b.getAttribute('aria-label'), target: id, exists: !!(id && document.getElementById(id)) };
+      const id = b && b.getAttribute('data-target');
+      return { text: li.textContent, visible: b && b.textContent.trim(), type: b && b.type, label: b && b.getAttribute('aria-label'), target: id, exists: !!(id && document.getElementById(id)) };
     }));
     assert.equal(items.length, 8);
     for (const it of items) {
       assert.equal(it.type, 'button', it.text);
       assert.ok(it.label && it.label.length > 5, 'no accessible name: ' + it.text);
+      assert.ok(it.label.toLowerCase().startsWith(it.visible.toLowerCase()), 'label "' + it.label + '" does not start with "' + it.visible + '"');
       assert.ok(it.exists, 'target #' + it.target + ' missing for: ' + it.text);
     }
     for (const word of ['Sa', 'Audav', 'Shadav', 'Sampurna', 'Ma and Pa', 'aroha', 'avaroha', 'vadi', 'samvadi', 'pakad', 'meend', 'andolan', 'rasa']) {
@@ -61,7 +62,7 @@ test('each link opens its panel, scrolls its target on screen and focuses it', a
       // Start each time with Raga rules folded, so a link has to open it.
       await page.evaluate(() => { document.getElementById('ragaPanel').open = false; document.getElementById('whatPanel').open = true; });
       const go = page.locator('#whatPanel .go').nth(i);
-      const target = await go.getAttribute('aria-controls');
+      const target = await go.getAttribute('data-target');
       await go.click();
       const r = await page.evaluate((id) => {
         const el = document.getElementById(id), box = el.getBoundingClientRect(), d = el.closest('details');
